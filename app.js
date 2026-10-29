@@ -286,6 +286,7 @@ function makeFramePreview(frame) {
   preview.className = "gallery-frame-preview";
   const photo = document.createElement("span");
   photo.className = "gallery-photo";
+  photo.innerHTML = "<i></i><i></i><i></i><i></i>";
   const image = document.createElement("img");
   image.className = "custom-frame-art";
   image.src = frame.dataUrl;

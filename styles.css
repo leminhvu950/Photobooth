@@ -534,11 +534,38 @@ svg {
   right: 8%;
   bottom: 22%;
   left: 8%;
-  border-radius: 5px;
+  display: grid;
+  gap: 4px;
+}
+
+.gallery-photo i {
+  display: block;
+  border-radius: 3px;
   background:
     radial-gradient(circle at 52% 36%, #f6d0bd 0 9%, transparent 9.5%),
     radial-gradient(ellipse at 52% 88%, #c5765e 0 24%, transparent 24.5%),
     linear-gradient(145deg, #c4e0df, #8eb8b7);
+  background-repeat: no-repeat;
+}
+
+/* 1 ảnh */
+.active-layout-single .gallery-photo {
+  grid-template-columns: 1fr;
+}
+.active-layout-single .gallery-photo i:not(:first-child) { display: none; }
+
+/* Dải 3 ảnh */
+.active-layout-strip .gallery-photo {
+  top: 7%;
+  bottom: 18%;
+  grid-template-rows: repeat(3, 1fr);
+}
+.active-layout-strip .gallery-photo i:nth-child(n+4) { display: none; }
+
+/* Lưới 4 ảnh */
+.active-layout-grid .gallery-photo {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
 }
 
 .gallery-frame-preview i {
