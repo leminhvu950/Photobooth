@@ -1,6 +1,6 @@
 # SnapJoy Photobooth
 
-Một photobooth chạy hoàn toàn trên trình duyệt. Ảnh và video tạo dáng được xử lý cục bộ, không tải lên máy chủ.
+Một photobooth chạy hoàn toàn trên trình duyệt. Ảnh và video tạo dáng được xử lý ngay trên thiết bị và không tải lên máy chủ nào — trừ khi bạn chủ động bật tính năng chia sẻ QR (xem mục **Chia sẻ ảnh và video qua mã QR**).
 
 ## Chạy thử
 
@@ -59,7 +59,7 @@ Sau đó mở `http://localhost:8080/` và `http://localhost:8080/admin/`.
 - Tự động quay video không âm thanh trong lúc khách tạo dáng, cho phép xem lại và tải xuống sau phiên chụp.
 - Bốn phong cách màu, bốn kiểu khung (Tối giản, Film, Tình yêu, Lễ hội) và màu khung tùy chỉnh.
 - Xuất PNG chất lượng cao, chia sẻ qua Web Share và in.
-- Chia sẻ ảnh và video sang điện thoại bằng mã QR trong cùng mạng Wi-Fi (cần chạy `npm start`).
+- Chia sẻ ảnh và video sang điện thoại bằng mã QR — chạy `npm start` trong cùng mạng Wi-Fi hoặc trỏ tới máy chủ chia sẻ công khai.
 - Lưu tùy chọn trên thiết bị, chạy responsive và hỗ trợ bàn phím.
 - PWA có thể cài lên thiết bị và mở lại offline.
 - Dashboard quản trị tại `/admin/`, có mật khẩu riêng trên thiết bị.
@@ -79,14 +79,35 @@ Mật khẩu, lịch sử, doanh thu, cài đặt và frame đều được lưu
 
 ## Chia sẻ ảnh và video qua mã QR
 
-Tính năng chỉ hoạt động khi photobooth chạy bằng `npm start`, vì cần máy chủ cục bộ để lưu tạm file và phát cho điện thoại trong cùng mạng Wi-Fi. Trên GitHub Pages, nút QR sẽ tự ẩn.
+Khách quét mã QR để tải ảnh PNG và video tạo dáng về điện thoại. Máy chủ chia sẻ lưu tạm file, liên kết tự hết hạn sau 30 phút rồi file bị xóa. Có hai cách chạy.
 
-1. Chạy `npm start` trên máy photobooth và mở `http://localhost:8080` bằng trình duyệt.
-2. Sau khi chụp xong, ở bước **Nhận ảnh** sẽ có nút **Tạo QR tải ảnh** (kèm video nếu phiên chụp có video tạo dáng). Nếu máy không tìm thấy địa chỉ Wi-Fi, đặt biến môi trường `SNAPJOY_SHARE_HOST` theo IP của máy, ví dụ `SNAPJOY_SHARE_HOST=192.168.1.20`.
-3. Bấm nút, chờ mã QR hiện ra rồi cho khách quét bằng camera điện thoại. Điện thoại phải kết nối cùng mạng Wi-Fi với máy photobooth.
-4. Trang tải cho phép xem và tải ảnh PNG cùng video. Liên kết và file tạm tự hết hạn sau 30 phút và được dọn khỏi máy.
+### Cách 1: máy chủ cục bộ, cùng mạng Wi-Fi
 
-Có thể đổi cổng bằng `SNAPJOY_PORT`, ví dụ `SNAPJOY_PORT=9000`.
+1. Chạy `npm start` trên máy photobooth rồi mở `http://localhost:8080` bằng trình duyệt.
+2. Sau khi chụp xong, ở bước **Nhận ảnh** bấm **Tạo QR tải ảnh** (kèm video nếu phiên chụp có video tạo dáng).
+3. Cho khách quét mã bằng camera điện thoại. Điện thoại phải kết nối cùng mạng Wi-Fi với máy photobooth.
+4. Nếu máy không tự nhận địa chỉ Wi-Fi, đặt `SNAPJOY_SHARE_HOST` theo IP của máy, ví dụ `SNAPJOY_SHARE_HOST=192.168.1.20`. Đổi cổng bằng `SNAPJOY_PORT=9000`.
+
+### Cách 2: máy chủ chia sẻ công khai, dùng cho GitHub Pages
+
+GitHub Pages chỉ phát file tĩnh nên không chạy được máy chủ chia sẻ. Hãy triển khai `scripts/local-share-server.mjs` lên một host Node (ví dụ Render), rồi trỏ photobooth tới host đó.
+
+1. Vào Render, chọn **New → Blueprint** và kết nối repository này. Render đọc `render.yaml` và tạo service `snapjoy-share`.
+2. Kiểm tra biến `SNAPJOY_ALLOWED_ORIGIN` là địa chỉ web photobooth, ví dụ `https://leminhvu950.github.io`. Nhiều giá trị thì phân tách bằng dấu phẩy; giá trị mặc định `*` cho phép mọi origin.
+3. Chờ deploy xong rồi chép địa chỉ service, ví dụ `https://snapjoy-share.onrender.com`.
+4. Trong `app.js`, đặt `SHARE_API_BASE` bằng địa chỉ đó (không có dấu `/` ở cuối), rồi push lên `main` để GitHub Pages deploy lại.
+5. Mở web photobooth, chụp xong và bấm **Tạo QR tải ảnh**. Khách quét mã bằng điện thoại có internet, không cần cùng mạng Wi-Fi.
+
+Biến môi trường của máy chủ chia sẻ:
+
+| Biến | Ý nghĩa |
+| --- | --- |
+| `PORT`, `SNAPJOY_PORT` | Cổng máy chủ, mặc định `8080`. Render tự đặt `PORT`. |
+| `SNAPJOY_PUBLIC_URL` | Địa chỉ công khai ghi vào mã QR. Trên Render tự dùng `RENDER_EXTERNAL_URL`. |
+| `SNAPJOY_SHARE_HOST` | Địa chỉ ghi vào mã QR ở chế độ cục bộ, ví dụ `192.168.1.20`. |
+| `SNAPJOY_ALLOWED_ORIGIN` | Các origin được phép gọi API, phân tách bằng dấu phẩy; mặc định `*`. |
+
+Ở chế độ công khai, ảnh và video được tải lên host trong thời gian ngắn (tối đa 30 phút) trước khi bị xóa. Gói free của Render sẽ "ngủ" sau khoảng 15 phút không dùng, nên lần bấm QR đầu tiên có thể phải chờ máy chủ khởi động lại.
 
 ## Thêm khung tùy chỉnh
 

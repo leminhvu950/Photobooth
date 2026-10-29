@@ -1,5 +1,14 @@
 "use strict";
 
+// Địa chỉ máy chủ chia sẻ QR khi web chạy tách rời khỏi máy chủ đó.
+// Ví dụ đặt "https://snapjoy-share.onrender.com" khi photobooth chạy trên GitHub Pages.
+// Để trống "" khi photobooth và máy chủ chia sẻ chạy cùng origin (npm start).
+const SHARE_API_BASE = "";
+
+function shareApiUrl(path) {
+  return SHARE_API_BASE ? `${SHARE_API_BASE}${path}` : path;
+}
+
 const LAYOUTS = {
   single: { label: "1 ảnh", count: 1 },
   strip: { label: "Dải 3 ảnh", count: 3 },
@@ -1193,8 +1202,9 @@ async function readApiResponse(response, fallbackMessage) {
 }
 
 async function detectLocalSharing() {
+  if (SHARE_API_BASE) elements.qrShareButton.hidden = false;
   try {
-    const response = await fetch("./api/config", {
+    const response = await fetch(shareApiUrl("/api/config"), {
       cache: "no-store",
       headers: { Accept: "application/json" },
     });
@@ -1204,13 +1214,24 @@ async function detectLocalSharing() {
     state.localSharingConfig = config;
     elements.qrShareButton.hidden = false;
   } catch {
-    // Nút QR chỉ xuất hiện khi ứng dụng chạy qua máy chủ chia sẻ cục bộ.
+    // Không có máy chủ chia sẻ: chỉ hiện nút QR khi đã cấu hình SHARE_API_BASE.
   }
 }
 
 async function createQrShare() {
   if (!state.localSharingConfig) {
-    showToast("Hãy chạy SnapJoy bằng máy chủ chia sẻ cục bộ để tạo mã QR.");
+    elements.qrShareButton.disabled = true;
+    elements.qrShareButtonLabel.textContent = "Đang kết nối máy chia sẻ…";
+    await detectLocalSharing();
+  }
+  if (!state.localSharingConfig) {
+    elements.qrShareButton.disabled = false;
+    elements.qrShareButtonLabel.textContent = state.poseVideoBlob
+      ? "Tạo QR tải ảnh & video"
+      : "Tạo QR tải ảnh";
+    showToast(SHARE_API_BASE
+      ? "Không kết nối được máy chủ chia sẻ. Kiểm tra lại địa chỉ trong SHARE_API_BASE."
+      : "Hãy chạy SnapJoy bằng máy chủ chia sẻ cục bộ để tạo mã QR.");
     return;
   }
 
@@ -1220,7 +1241,7 @@ async function createQrShare() {
 
   try {
     const photoBlob = await canvasToBlob(elements.resultCanvas);
-    const createResponse = await fetch("./api/shares", {
+    const createResponse = await fetch(shareApiUrl("/api/shares"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1231,14 +1252,14 @@ async function createQrShare() {
     const session = await readApiResponse(createResponse, "Không thể tạo phiên chia sẻ.");
 
     const uploads = [
-      fetch(session.photoUploadUrl, {
+      fetch(shareApiUrl(session.photoUploadUrl), {
         method: "PUT",
         headers: { "Content-Type": "image/png" },
         body: photoBlob,
       }),
     ];
     if (state.poseVideoBlob && session.videoUploadUrl) {
-      uploads.push(fetch(session.videoUploadUrl, {
+      uploads.push(fetch(shareApiUrl(session.videoUploadUrl), {
         method: "PUT",
         headers: { "Content-Type": state.poseVideoBlob.type || "video/webm" },
         body: state.poseVideoBlob,
@@ -1250,7 +1271,7 @@ async function createQrShare() {
       await readApiResponse(response, "Không thể gửi ảnh hoặc video tới máy chia sẻ.");
     }
 
-    const completeResponse = await fetch(session.completeUrl, { method: "POST" });
+    const completeResponse = await fetch(shareApiUrl(session.completeUrl), { method: "POST" });
     const completed = await readApiResponse(completeResponse, "Không thể hoàn tất mã QR.");
     const expiresAt = new Date(completed.expiresAt);
     elements.qrCodeImage.src = completed.qrDataUrl;
@@ -1260,7 +1281,9 @@ async function createQrShare() {
       minute: "2-digit",
     })}`;
     elements.qrSharePanel.hidden = false;
-    showToast("Mã QR đã sẵn sàng — điện thoại cần dùng cùng mạng Wi-Fi.");
+    showToast(state.localSharingConfig.hosted
+      ? "Mã QR đã sẵn sàng — khách quét mã bằng điện thoại."
+      : "Mã QR đã sẵn sàng — điện thoại cần dùng cùng mạng Wi-Fi.");
   } catch (error) {
     console.error(error);
     showToast(error?.message || "Không thể tạo mã QR. Vui lòng thử lại.");

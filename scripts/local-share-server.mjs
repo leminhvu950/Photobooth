@@ -14,7 +14,7 @@ await import("./build-static.mjs");
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const staticRoot = path.join(projectRoot, "dist");
 const shareRoot = path.join(projectRoot, ".snapjoy-shares");
-const configuredPort = Number.parseInt(process.env.SNAPJOY_PORT || "8080", 10);
+const configuredPort = Number.parseInt(process.env.PORT || process.env.SNAPJOY_PORT || "8080", 10);
 const port = Number.isInteger(configuredPort) && configuredPort > 0 ? configuredPort : 8080;
 const shareLifetimeMs = 30 * 60 * 1000;
 const maxPhotoBytes = 25 * 1024 * 1024;
@@ -50,11 +50,30 @@ function normalizeConfiguredHost(value) {
 }
 
 const lanAddress = findLanAddress();
-const configuredShareHost = process.env.SNAPJOY_SHARE_HOST?.trim();
-const publicBaseUrl = configuredShareHost
-  ? normalizeConfiguredHost(configuredShareHost)
+const configuredBaseUrl = (
+  process.env.SNAPJOY_PUBLIC_URL
+  || process.env.SNAPJOY_SHARE_HOST
+  || process.env.RENDER_EXTERNAL_URL
+  || ""
+).trim();
+const hostedPublicly = Boolean(configuredBaseUrl);
+const publicBaseUrl = hostedPublicly
+  ? normalizeConfiguredHost(configuredBaseUrl)
   : `http://${lanAddress || "localhost"}:${port}`;
-const phoneReady = Boolean(configuredShareHost || lanAddress);
+const phoneReady = hostedPublicly || Boolean(lanAddress);
+const allowedOrigins = (process.env.SNAPJOY_ALLOWED_ORIGIN || "*")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+function applyCors(request, response) {
+  const origin = request.headers.origin;
+  if (!origin) return;
+  const allowAll = allowedOrigins.includes("*");
+  if (!allowAll && !allowedOrigins.includes(origin.replace(/\/$/, ""))) return;
+  response.setHeader("Access-Control-Allow-Origin", allowAll ? "*" : origin);
+  if (!allowAll) response.setHeader("Vary", "Origin");
+}
 
 function sendJson(response, statusCode, data) {
   const body = JSON.stringify(data);
@@ -254,6 +273,9 @@ function sharePage(metadata) {
   const videoBlock = metadata.hasVideo
     ? `<section class="asset"><h2>Video tạo dáng</h2><video controls playsinline preload="metadata" src="/share/${metadata.id}/video"></video><a class="button secondary" href="/share/${metadata.id}/video?download=1">Tải video</a></section>`
     : "";
+  const notice = hostedPublicly
+    ? `Liên kết tự hết hạn lúc ${expiresAt}.`
+    : `Liên kết chỉ hoạt động trong cùng mạng Wi-Fi và tự hết hạn lúc ${expiresAt}.`;
 
   return `<!doctype html>
 <html lang="vi">
@@ -284,7 +306,7 @@ function sharePage(metadata) {
       <header><div class="brand">SnapJoy Photobooth</div><h1>Khoảnh khắc của bạn ✦</h1><p>Tải ảnh và video xuống điện thoại trước khi liên kết hết hạn.</p></header>
       <section class="asset"><h2>Ảnh photobooth</h2><img src="/share/${metadata.id}/photo" alt="Ảnh photobooth của bạn" /><a class="button" href="/share/${metadata.id}/photo?download=1">Tải ảnh PNG</a></section>
       ${videoBlock}
-      <p class="notice">Liên kết chỉ hoạt động trong cùng mạng Wi-Fi và tự hết hạn lúc ${expiresAt}.</p>
+      <p class="notice">${notice}</p>
     </main>
   </body>
 </html>`;
@@ -395,11 +417,22 @@ const server = createServer(async (request, response) => {
   const pathname = requestUrl.pathname;
 
   try {
+    applyCors(request, response);
+    if (request.method === "OPTIONS") {
+      response.writeHead(204, {
+        "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age": "86400",
+      });
+      response.end();
+      return;
+    }
     if (request.method === "GET" && pathname === "/api/config") {
       sendJson(response, 200, {
         localSharing: true,
         phoneReady,
         publicBaseUrl,
+        hosted: hostedPublicly,
         expiresInMinutes: shareLifetimeMs / 60_000,
       });
       return;
@@ -444,8 +477,11 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, "0.0.0.0", () => {
-  console.log(`SnapJoy local booth: http://localhost:${port}`);
-  if (phoneReady) {
+  console.log(`SnapJoy booth: http://localhost:${port}`);
+  if (hostedPublicly) {
+    console.log(`Phone download link base: ${publicBaseUrl}`);
+    console.log("Khách quét mã QR bằng điện thoại có internet, không cần cùng mạng Wi-Fi.");
+  } else if (phoneReady) {
     console.log(`Phone download link base: ${publicBaseUrl}`);
     console.log("Điện thoại cần kết nối cùng mạng Wi-Fi với máy photobooth.");
   } else {

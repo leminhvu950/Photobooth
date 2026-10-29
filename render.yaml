@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: snapjoy-share
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: node scripts/local-share-server.mjs
+    healthCheckPath: /api/config
+    envVars:
+      - key: SNAPJOY_ALLOWED_ORIGIN
+        value: https://leminhvu950.github.io
+      - key: NODE_VERSION
+        value: "22"
