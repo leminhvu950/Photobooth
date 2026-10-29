@@ -541,11 +541,13 @@ svg {
 .gallery-photo i {
   display: block;
   border-radius: 3px;
-  background:
-    radial-gradient(circle at 52% 36%, #f6d0bd 0 9%, transparent 9.5%),
-    radial-gradient(ellipse at 52% 88%, #c5765e 0 24%, transparent 24.5%),
+  background-color: #c4e0df;
+  background-image:
+    radial-gradient(circle at center 35%, #f6d0bd 0 7px, transparent 8px),
+    radial-gradient(ellipse at center 95%, #c5765e 0 18px, transparent 19px),
     linear-gradient(145deg, #c4e0df, #8eb8b7);
   background-repeat: no-repeat;
+  background-position: center;
 }
 
 /* 1 ảnh */
