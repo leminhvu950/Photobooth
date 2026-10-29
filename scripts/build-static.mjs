@@ -1,4 +1,4 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -20,5 +20,6 @@ await Promise.all(
   publicFiles.map((file) => cp(path.join(projectRoot, file), path.join(outputDirectory, file))),
 );
 await cp(path.join(projectRoot, "admin"), path.join(outputDirectory, "admin"), { recursive: true });
+await writeFile(path.join(outputDirectory, ".nojekyll"), "");
 
-console.log(`Built ${publicFiles.length + 3} SnapJoy assets in ${outputDirectory}`);
+console.log(`Built SnapJoy for GitHub Pages in ${outputDirectory}`);

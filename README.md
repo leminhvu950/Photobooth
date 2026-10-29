@@ -20,15 +20,17 @@ Nếu máy đã có Node.js:
 npx serve .
 ```
 
-## Triển khai lên Render
+## Triển khai lên GitHub Pages
 
-Dự án có sẵn `render.yaml` và script `scripts/build-static.mjs`. Render sẽ tạo thư mục `dist/`, phát hành website dưới dạng Static Site và tự triển khai lại sau mỗi lần push.
+Dự án có sẵn workflow `.github/workflows/deploy-pages.yml`. Mỗi lần mã được push lên nhánh `main`, GitHub Actions sẽ chạy `scripts/build-static.mjs`, tạo thư mục `dist/` và phát hành website tự động.
 
-1. Đưa thư mục dự án lên một GitHub repository.
-2. Trong Render, chọn **New → Blueprint** và kết nối repository đó.
-3. Render sẽ đọc `render.yaml`; kiểm tra service có tên `snapjoy-photobooth` rồi chọn **Apply**.
-4. Sau khi trạng thái chuyển thành **Live**, mở URL dạng `https://snapjoy-photobooth.onrender.com` và kiểm tra thêm `/admin/` ở cuối URL.
-5. Để dùng tên miền riêng, mở **Settings → Custom Domains** của Static Site và làm theo bản ghi DNS Render cung cấp.
+1. Tạo một GitHub repository, ví dụ `snapjoy-photobooth`, rồi push dự án lên nhánh `main`.
+2. Trong repository, mở **Settings → Pages**.
+3. Tại **Build and deployment → Source**, chọn **GitHub Actions**.
+4. Mở tab **Actions**, chọn workflow **Deploy SnapJoy to GitHub Pages** và chờ cả hai job `build` và `deploy` hoàn tất.
+5. Website sẽ có địa chỉ dạng `https://TEN_GITHUB.github.io/snapjoy-photobooth/`; trang quản trị nằm tại `https://TEN_GITHUB.github.io/snapjoy-photobooth/admin/`.
+
+GitHub Pages tự cấp HTTPS cho tên miền `github.io`, vì vậy camera có thể yêu cầu quyền truy cập trong trình duyệt. Nếu dùng tên miền riêng, cấu hình tại **Settings → Pages → Custom domain** rồi bật **Enforce HTTPS**.
 
 Có thể kiểm tra bản build trước khi push:
 
