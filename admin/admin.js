@@ -544,6 +544,11 @@ function clearFilePreview() {
 async function prepareFrameFile(file) {
   clearFilePreview();
   if (!file) return;
+
+  // Cập nhật tỷ lệ khung preview dựa trên layout đã chọn
+  elements.adminFramePreview.parentElement.classList.remove("preview-single", "preview-strip", "preview-grid", "preview-all");
+  elements.adminFramePreview.parentElement.classList.add(`preview-${elements.customFrameLayout.value}`);
+
   if (!["image/png", "image/webp"].includes(file.type)) {
     setFileFeedback("Chỉ chấp nhận file PNG hoặc WebP.", "error");
     return;
@@ -749,6 +754,10 @@ function bindEvents() {
   elements.resetFormButton.addEventListener("click", resetFrameForm);
   elements.customFrameFile.addEventListener("change", (event) => prepareFrameFile(event.target.files[0]));
   elements.customFrameLayout.addEventListener("change", () => {
+    // Cập nhật tỷ lệ khung preview khi đổi layout
+    elements.adminFramePreview.parentElement.classList.remove("preview-single", "preview-strip", "preview-grid", "preview-all");
+    elements.adminFramePreview.parentElement.classList.add(`preview-${elements.customFrameLayout.value}`);
+
     if (!state.pendingFrame) return;
     const warning = ratioWarning(state.pendingFrame.width, state.pendingFrame.height, elements.customFrameLayout.value);
     setFileFeedback(warning || `Kích thước ${state.pendingFrame.width}×${state.pendingFrame.height}px phù hợp.`, warning ? "warning" : "");
