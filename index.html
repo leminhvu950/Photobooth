@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff7ed" />
+    <meta
+      name="description"
+      content="SnapJoy — photobooth chạy ngay trên trình duyệt, có đếm ngược, filter, ghép khung và in ảnh."
+    />
+    <title>SnapJoy Photobooth</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="SnapJoy - về màn hình chính">
+        <span class="brand-mark" aria-hidden="true">
+          <span class="brand-lens"></span>
+        </span>
+        <span>
+          <strong id="boothBrandName">SnapJoy</strong>
+          <small>PHOTOBOOTH</small>
+        </span>
+      </a>
+
+      <div class="topbar-actions">
+        <span class="camera-status" id="cameraStatus">
+          <span class="status-dot"></span>
+          <span id="cameraStatusText">Chưa kết nối</span>
+        </span>
+        <a class="admin-button" href="./admin/">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.5" />
+            <path d="M5 21v-2a7 7 0 0 1 14 0v2M18.5 4.5l1-1m0 9 1 1" />
+          </svg>
+          Quản trị
+        </a>
+        <button class="icon-button" id="fullscreenButton" type="button" aria-label="Bật toàn màn hình" title="Toàn màn hình">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="layout-step flow-slide is-active" id="layoutStep" aria-labelledby="layoutStepTitle">
+        <div class="frame-step-heading">
+          <p class="eyebrow">Bước 1/4 · Chọn kiểu ảnh</p>
+          <h1 id="layoutStepTitle">Bạn muốn chụp kiểu nào? <span aria-hidden="true">✦</span></h1>
+          <p>Chọn số lượng và cách sắp xếp ảnh trước khi chọn frame trang trí.</p>
+        </div>
+
+        <div class="layout-choice-gallery" role="radiogroup" aria-label="Chọn kiểu ảnh">
+          <button class="layout-choice-card is-selected" type="button" data-layout="single" role="radio" aria-checked="true">
+            <span class="large-layout-preview large-single" aria-hidden="true"><i></i></span>
+            <span class="layout-choice-info"><strong>1 ảnh</strong><small>Một khoảnh khắc nổi bật</small><em>1 lần chụp · tỷ lệ 4:5</em></span>
+            <span class="frame-check" aria-hidden="true">✓</span>
+          </button>
+          <button class="layout-choice-card" type="button" data-layout="strip" role="radio" aria-checked="false">
+            <span class="large-layout-preview large-strip" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="layout-choice-info"><strong>Dải 3 ảnh</strong><small>Ba dáng chụp liên tiếp</small><em>3 lần chụp · tỷ lệ 1:2</em></span>
+            <span class="frame-check" aria-hidden="true">✓</span>
+          </button>
+          <button class="layout-choice-card" type="button" data-layout="grid" role="radio" aria-checked="false">
+            <span class="large-layout-preview large-grid" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="layout-choice-info"><strong>Lưới 4 ảnh</strong><small>Bốn khoảnh khắc trong một khung</small><em>4 lần chụp · tỷ lệ 3:4</em></span>
+            <span class="frame-check" aria-hidden="true">✓</span>
+          </button>
+        </div>
+
+        <div class="layout-step-footer">
+          <p>Đã chọn: <strong id="selectedLayoutLabel">1 ảnh</strong></p>
+          <button class="primary-button continue-button" id="continueToFrameButton" type="button">
+            Tiếp tục chọn frame
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5" /></svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="frame-step flow-slide" id="frameStep" aria-labelledby="frameStepTitle" hidden>
+        <div class="frame-step-heading">
+          <p class="eyebrow">Bước 2/4 · Chọn frame cho <span id="frameLayoutContext">1 ảnh</span></p>
+          <h1 id="frameStepTitle">Chọn frame bạn thích <span aria-hidden="true">✦</span></h1>
+          <p>Chỉ các frame phù hợp với kiểu ảnh đã chọn được hiển thị tại đây.</p>
+        </div>
+
+        <div class="frame-gallery" id="builtInFrameGallery" role="radiogroup" aria-label="Khung có sẵn">
+          <button class="frame-card is-selected" type="button" data-frame-choice="minimal" role="radio" aria-checked="true">
+            <span class="gallery-frame-preview gallery-minimal" aria-hidden="true">
+              <span class="gallery-photo"></span><i>SnapJoy</i>
+            </span>
+            <span class="frame-card-info"><strong>Tối giản</strong><small>Thanh lịch · Mọi bố cục</small></span>
+            <span class="frame-check" aria-hidden="true">✓</span>
+          </button>
+          <button class="frame-card" type="button" data-frame-choice="film" role="radio" aria-checked="false">
+            <span class="gallery-frame-preview gallery-film" aria-hidden="true">
+              <span class="gallery-photo"></span><i>35 mm</i>
+            </span>
+            <span class="frame-card-info"><strong>Cuộn film</strong><small>Cổ điển · Mọi bố cục</small></span>
+            <span class="frame-check" aria-hidden="true">✓</span>
+          </button>
+          <button class="frame-card" type="button" data-frame-choice="love" role="radio" aria-checked="false">
+            <span class="gallery-frame-preview gallery-love" aria-hidden="true">
+              <span class="gallery-photo"></span><b>♥</b><i>love</i>
+            </span>
+            <span class="frame-card-info"><strong>Tình yêu</strong><small>Ngọt ngào · Mọi bố cục</small></span>
+            <span class="frame-check" aria-hidden="true">✓</span>
+          </button>
+          <button class="frame-card" type="button" data-frame-choice="party" role="radio" aria-checked="false">
+            <span class="gallery-frame-preview gallery-party" aria-hidden="true">
+              <span class="gallery-photo"></span><b>✦</b><i>PARTY!</i>
+            </span>
+            <span class="frame-card-info"><strong>Lễ hội</strong><small>Rực rỡ · Mọi bố cục</small></span>
+            <span class="frame-check" aria-hidden="true">✓</span>
+          </button>
+        </div>
+
+        <div class="custom-frames-block">
+          <div class="custom-frames-heading">
+            <div>
+              <p class="eyebrow">Bộ sưu tập riêng</p>
+              <h2>Khung của bạn</h2>
+            </div>
+            <a class="secondary-button" href="./admin/">＋ Thêm khung</a>
+          </div>
+          <div class="custom-frame-gallery" id="customFrameGallery" role="radiogroup" aria-label="Khung tùy chỉnh"></div>
+          <div class="empty-frames" id="emptyFrames">
+            <span aria-hidden="true">▧</span>
+            <p>Chưa có frame tùy chỉnh phù hợp với kiểu ảnh này.</p>
+            <a href="./admin/">Mở quản trị để thêm khung đầu tiên</a>
+          </div>
+        </div>
+
+        <div class="frame-step-footer">
+          <button class="step-back-button" id="backToLayoutButton" type="button">← Đổi kiểu ảnh</button>
+          <p>Đã chọn: <strong id="selectedFrameLabel">Tối giản</strong></p>
+          <button class="primary-button continue-button" id="continueToCaptureButton" type="button">
+            Tiếp tục đến chụp ảnh
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5" /></svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="capture-step flow-slide" id="captureStep" hidden>
+        <section class="intro" aria-labelledby="pageTitle">
+          <p class="eyebrow">Bước 3/4 · Chụp ảnh</p>
+          <h1 id="pageTitle">Cười lên nào! <span aria-hidden="true">✦</span></h1>
+          <p>Frame đã sẵn sàng. Camera chỉ mở ở bước này.</p>
+        </section>
+
+        <section class="booth" aria-label="Photobooth">
+        <div class="stage-card">
+          <div class="camera-stage" id="cameraStage">
+            <video id="cameraVideo" autoplay muted playsinline aria-label="Hình ảnh trực tiếp từ camera"></video>
+            <div class="camera-grid" aria-hidden="true"></div>
+            <div class="camera-vignette" aria-hidden="true"></div>
+            <div class="flash" id="flash" aria-hidden="true"></div>
+
+            <div class="welcome-overlay" id="welcomeOverlay">
+              <div class="welcome-illustration" aria-hidden="true">
+                <span class="spark spark-one">✦</span>
+                <span class="camera-illustration"><span></span></span>
+                <span class="spark spark-two">✦</span>
+              </div>
+              <h2>Bắt đầu một phiên chụp</h2>
+              <p>Cho phép truy cập camera để xem trước và chụp ảnh.</p>
+              <button class="primary-button" id="startButton" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M14.5 6 13 4h-2L9.5 6H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.5Z" />
+                  <circle cx="12" cy="12.5" r="3.5" />
+                </svg>
+                Mở camera
+              </button>
+              <p class="privacy-note">Camera chỉ được xử lý trên thiết bị của bạn.</p>
+            </div>
+
+            <div class="countdown" id="countdown" aria-live="assertive" aria-atomic="true"></div>
+
+            <div class="pose-status" id="poseStatus" aria-live="polite">
+              <span id="poseStatusText">Sẵn sàng</span>
+              <span class="pose-progress" id="poseProgress"></span>
+            </div>
+
+            <div class="camera-error" id="cameraError" role="alert">
+              <span class="error-icon">!</span>
+              <h2>Không thể mở camera</h2>
+              <p id="cameraErrorText">Hãy kiểm tra quyền truy cập camera và thử lại.</p>
+              <button class="secondary-button" id="retryCameraButton" type="button">Thử lại</button>
+            </div>
+          </div>
+
+          <div class="stage-toolbar">
+            <label class="device-control" for="cameraSelect">
+              <span>Camera</span>
+              <select id="cameraSelect" aria-label="Chọn camera">
+                <option value="">Camera mặc định</option>
+              </select>
+            </label>
+            <button class="toolbar-button" id="mirrorButton" type="button" aria-pressed="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M3 12h18M16 7l5 5-5 5" /></svg>
+              Lật gương
+            </button>
+          </div>
+        </div>
+
+        <aside class="control-card" aria-label="Tùy chỉnh ảnh">
+          <div class="control-heading">
+            <div>
+              <p class="section-number">01</p>
+              <h2>Kiểu ảnh đã chọn</h2>
+            </div>
+            <span class="selection-label" id="layoutLabel">1 ảnh</span>
+          </div>
+
+          <div class="selected-layout-summary">
+            <span class="layout-preview layout-single" id="captureLayoutPreview" aria-hidden="true"><i></i></span>
+            <span><strong id="captureLayoutName">1 ảnh</strong><small id="captureLayoutMeta">1 lần chụp · tỷ lệ 4:5</small></span>
+            <button type="button" id="changeLayoutButton">Đổi kiểu</button>
+          </div>
+
+          <div class="control-section">
+            <div class="control-heading compact">
+              <div>
+                <p class="section-number">02</p>
+                <h2>Hẹn giờ</h2>
+              </div>
+            </div>
+            <div class="segmented" role="radiogroup" aria-label="Thời gian đếm ngược">
+              <button type="button" data-timer="3" role="radio" aria-checked="true" class="is-selected">3 giây</button>
+              <button type="button" data-timer="5" role="radio" aria-checked="false">5 giây</button>
+              <button type="button" data-timer="10" role="radio" aria-checked="false">10 giây</button>
+            </div>
+          </div>
+
+          <div class="control-section">
+            <div class="control-heading compact">
+              <div>
+                <p class="section-number">03</p>
+                <h2>Phong cách</h2>
+              </div>
+            </div>
+            <div class="filter-list" id="filterList" role="radiogroup" aria-label="Bộ lọc ảnh">
+              <button type="button" class="filter-chip is-selected" data-filter="normal" role="radio" aria-checked="true">
+                <span class="filter-swatch filter-normal"></span>Tự nhiên
+              </button>
+              <button type="button" class="filter-chip" data-filter="warm" role="radio" aria-checked="false">
+                <span class="filter-swatch filter-warm"></span>Ấm áp
+              </button>
+              <button type="button" class="filter-chip" data-filter="mono" role="radio" aria-checked="false">
+                <span class="filter-swatch filter-mono"></span>Đen trắng
+              </button>
+              <button type="button" class="filter-chip" data-filter="dream" role="radio" aria-checked="false">
+                <span class="filter-swatch filter-dream"></span>Trong trẻo
+              </button>
+            </div>
+          </div>
+
+          <div class="control-section selected-frame-section">
+            <div class="control-heading compact">
+              <div>
+                <p class="section-number">04</p>
+                <h2>Khung đã chọn</h2>
+              </div>
+            </div>
+            <div class="selected-frame-summary">
+              <span class="selected-frame-mini gallery-minimal" id="selectedFrameMini" aria-hidden="true"></span>
+              <span><strong id="captureFrameName">Tối giản</strong><small id="captureFrameMeta">Khung có sẵn</small></span>
+              <button type="button" id="changeFrameButton">Đổi khung</button>
+            </div>
+          </div>
+
+          <div class="control-section frame-section">
+            <label for="frameColor">Màu khung</label>
+            <div class="frame-colors" id="frameColors" role="radiogroup" aria-label="Màu khung ảnh">
+              <button type="button" data-color="#fffaf3" class="frame-color cream is-selected" role="radio" aria-checked="true" aria-label="Kem"></button>
+              <button type="button" data-color="#f9a8b8" class="frame-color pink" role="radio" aria-checked="false" aria-label="Hồng"></button>
+              <button type="button" data-color="#b8e0d2" class="frame-color mint" role="radio" aria-checked="false" aria-label="Xanh bạc hà"></button>
+              <button type="button" data-color="#bfdbfe" class="frame-color blue" role="radio" aria-checked="false" aria-label="Xanh da trời"></button>
+              <button type="button" data-color="#171717" class="frame-color black" role="radio" aria-checked="false" aria-label="Đen"></button>
+            </div>
+            <input id="frameColor" type="color" value="#fffaf3" aria-label="Chọn màu khung tùy chỉnh" />
+          </div>
+
+          <button class="capture-button" id="captureButton" type="button" disabled>
+            <span class="capture-icon" aria-hidden="true"><i></i></span>
+            <span>
+              <strong>Bắt đầu chụp</strong>
+              <small id="captureHint">1 ảnh · đếm ngược 3 giây</small>
+            </span>
+          </button>
+          <p class="keyboard-hint"><kbd>Space</kbd> để chụp · <kbd>Esc</kbd> để hủy</p>
+        </aside>
+        </section>
+      </section>
+
+      <section class="result-view flow-slide" id="resultView" aria-labelledby="resultTitle" hidden>
+        <div class="result-heading">
+          <p class="eyebrow">Bước 4/4 · Nhận ảnh</p>
+          <h2 id="resultTitle">Ảnh của bạn đã sẵn sàng <span aria-hidden="true">✦</span></h2>
+          <p>Tải về, chia sẻ hoặc in ngay tại photobooth.</p>
+        </div>
+
+        <div class="result-layout">
+          <div class="result-preview">
+            <canvas id="resultCanvas" aria-label="Ảnh photobooth đã ghép"></canvas>
+          </div>
+          <div class="result-actions">
+            <button class="primary-button large" id="downloadButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" /></svg>
+              Tải ảnh PNG
+            </button>
+            <button class="secondary-button large" id="shareButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="m8.3 10.8 7.4-4.5M8.3 13.2l7.4 4.5" /></svg>
+              Chia sẻ
+            </button>
+            <button class="secondary-button large" id="printButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z" /></svg>
+              In ảnh
+            </button>
+            <button class="text-button" id="retakeButton" type="button">↻ Chụp lại từ đầu</button>
+            <p class="result-privacy">Ảnh chưa từng được tải lên máy chủ — quyền riêng tư luôn thuộc về bạn.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <img id="printImage" class="print-image" alt="Ảnh để in" />
+
+    <footer>
+      <span id="boothFooterName">SnapJoy Photobooth</span>
+      <span>Ảnh được xử lý cục bộ trên thiết bị</span>
+    </footer>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

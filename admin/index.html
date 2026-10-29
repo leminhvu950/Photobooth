@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fffaf5" />
+    <meta name="description" content="Dashboard quản trị SnapJoy Photobooth." />
+    <title>Quản trị — SnapJoy</title>
+    <link rel="icon" href="../icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body>
+    <section class="auth-screen" id="authScreen">
+      <div class="auth-card">
+        <a class="auth-brand" href="../" aria-label="Về SnapJoy Photobooth">
+          <span class="brand-mark" aria-hidden="true"><i></i></span>
+          <span><strong>SnapJoy</strong><small>ADMIN STUDIO</small></span>
+        </a>
+        <div class="auth-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 15v2" /></svg>
+        </div>
+        <p class="eyebrow" id="authEyebrow">Đăng nhập quản trị</p>
+        <h1 id="authTitle">Chào mừng trở lại</h1>
+        <p class="auth-description" id="authDescription">Nhập mật khẩu để mở dashboard SnapJoy.</p>
+
+        <form id="authForm">
+          <label class="field">
+            <span id="authPasswordLabel">Mật khẩu</span>
+            <div class="password-field">
+              <input id="authPassword" type="password" minlength="6" autocomplete="current-password" required />
+              <button type="button" data-toggle-password="authPassword" aria-label="Hiện mật khẩu">👁</button>
+            </div>
+          </label>
+          <label class="field" id="authConfirmGroup" hidden>
+            <span>Xác nhận mật khẩu</span>
+            <div class="password-field">
+              <input id="authPasswordConfirm" type="password" minlength="6" autocomplete="new-password" />
+              <button type="button" data-toggle-password="authPasswordConfirm" aria-label="Hiện mật khẩu">👁</button>
+            </div>
+          </label>
+          <p class="form-message is-error" id="authMessage" aria-live="polite"></p>
+          <button class="primary-button auth-submit" id="authSubmitButton" type="submit">Đăng nhập</button>
+        </form>
+        <p class="auth-note">Mật khẩu bảo vệ dashboard trên thiết bị này. Dữ liệu không được gửi lên máy chủ.</p>
+      </div>
+    </section>
+
+    <div id="adminApp" hidden>
+      <header class="admin-topbar">
+        <a class="admin-brand" href="../" aria-label="Về SnapJoy Photobooth">
+          <span class="brand-mark" aria-hidden="true"><i></i></span>
+          <span><strong>SnapJoy</strong><small>ADMIN STUDIO</small></span>
+        </a>
+        <div class="topbar-actions">
+          <span class="local-badge"><i></i>Dữ liệu cục bộ</span>
+          <a class="view-site-button" href="../">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" /></svg>
+            Mở photobooth
+          </a>
+        </div>
+      </header>
+
+      <div class="admin-shell">
+        <aside class="admin-sidebar">
+          <nav aria-label="Điều hướng quản trị">
+            <button class="is-active" type="button" data-admin-view="dashboard">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+              Tổng quan
+            </button>
+            <button type="button" data-admin-view="sessions">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+              Lượt chụp
+            </button>
+            <button type="button" data-admin-view="frames">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="m7 15 3-3 3 3 2-2 3 3M8 9h.01" /></svg>
+              Khung ảnh
+            </button>
+            <button type="button" data-admin-view="settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" /></svg>
+              Cài đặt
+            </button>
+          </nav>
+          <div class="sidebar-bottom">
+            <div class="sidebar-note"><span aria-hidden="true">i</span><p>Dữ liệu chỉ tồn tại trong trình duyệt hiện tại.</p></div>
+            <button class="logout-button" id="logoutButton" type="button">↪ Đăng xuất</button>
+          </div>
+        </aside>
+
+        <main class="admin-main">
+          <section class="admin-view is-active" data-view-panel="dashboard">
+            <div class="page-heading">
+              <div><p class="eyebrow">Tổng quan hôm nay</p><h1 id="dashboardGreeting">Dashboard SnapJoy</h1><p>Theo dõi hoạt động photobooth và doanh thu đã nhận.</p></div>
+              <button class="primary-button" type="button" data-open-view="frames"><span>＋</span> Thêm frame</button>
+            </div>
+
+            <div class="dashboard-stats">
+              <article class="metric-card orange"><span class="metric-icon">◉</span><div><small>Tổng lượt chụp</small><strong id="dashboardTotalSessions">0</strong><em>Tất cả thời gian</em></div></article>
+              <article class="metric-card green"><span class="metric-icon">₫</span><div><small>Tiền đã nhận</small><strong id="dashboardRevenue">0 ₫</strong><em>Chỉ tính lượt đã thu</em></div></article>
+              <article class="metric-card purple"><span class="metric-icon">↗</span><div><small>Lượt hôm nay</small><strong id="dashboardTodaySessions">0</strong><em id="todayRevenue">0 ₫ doanh thu</em></div></article>
+              <article class="metric-card pink"><span class="metric-icon">▧</span><div><small>Frame tùy chỉnh</small><strong id="dashboardTotalFrames">0</strong><em>Đang có trong thư viện</em></div></article>
+            </div>
+
+            <div class="dashboard-grid">
+              <article class="panel chart-panel">
+                <div class="panel-title"><div><h2>Hoạt động 7 ngày</h2><p>Số lượt chụp hoàn tất theo ngày.</p></div><span>7 ngày gần nhất</span></div>
+                <div class="activity-chart" id="activityChart" aria-label="Biểu đồ lượt chụp 7 ngày"></div>
+              </article>
+              <article class="panel quick-panel">
+                <div class="panel-title"><div><h2>Thiết lập hiện tại</h2><p>Thông tin đang áp dụng tại photobooth.</p></div></div>
+                <dl class="quick-settings">
+                  <div><dt>Tên photobooth</dt><dd id="summaryBoothName">SnapJoy Photobooth</dd></div>
+                  <div><dt>Giá mỗi lượt</dt><dd id="summaryPrice">0 ₫</dd></div>
+                  <div><dt>Lưu trữ</dt><dd>Cục bộ trên thiết bị</dd></div>
+                </dl>
+                <button type="button" data-open-view="settings">Mở cài đặt →</button>
+              </article>
+            </div>
+
+            <article class="panel recent-panel">
+              <div class="panel-title"><div><h2>Lượt chụp gần đây</h2><p>Năm phiên photobooth mới nhất.</p></div><button type="button" data-open-view="sessions">Xem tất cả</button></div>
+              <div class="table-wrap"><table class="session-table"><thead><tr><th>Thời gian</th><th>Kiểu ảnh</th><th>Frame</th><th>Trạng thái</th><th>Số tiền</th></tr></thead><tbody id="recentSessionsBody"></tbody></table></div>
+              <div class="table-empty" id="recentSessionsEmpty">Chưa có lượt chụp nào được ghi nhận.</div>
+            </article>
+          </section>
+
+          <section class="admin-view" data-view-panel="sessions" hidden>
+            <div class="page-heading">
+              <div><p class="eyebrow">Lịch sử hoạt động</p><h1>Quản lý lượt chụp</h1><p>Xem phiên chụp, số tiền và cập nhật trạng thái thanh toán.</p></div>
+              <button class="outline-danger-button" id="clearSessionsButton" type="button">Xóa toàn bộ lịch sử</button>
+            </div>
+            <div class="stats-grid session-summary">
+              <article class="stat-card"><span class="stat-icon orange">◉</span><div><small>Tổng phiên</small><strong id="sessionsTotal">0</strong></div></article>
+              <article class="stat-card"><span class="stat-icon mint">₫</span><div><small>Đã thu</small><strong id="sessionsRevenue">0 ₫</strong></div></article>
+              <article class="stat-card"><span class="stat-icon pink">!</span><div><small>Chưa thu</small><strong id="sessionsUnpaid">0</strong></div></article>
+            </div>
+            <article class="panel sessions-panel">
+              <div class="session-toolbar">
+                <div><h2>Danh sách lượt chụp</h2><p>Thay đổi trạng thái để điều chỉnh doanh thu đã nhận.</p></div>
+                <label>Hiển thị <select id="sessionStatusFilter"><option value="all">Tất cả</option><option value="received">Đã thu</option><option value="pending">Chưa thu</option><option value="free">Miễn phí</option></select></label>
+              </div>
+              <div class="table-wrap"><table class="session-table full"><thead><tr><th>Mã phiên</th><th>Thời gian</th><th>Kiểu ảnh</th><th>Frame</th><th>Số ảnh</th><th>Trạng thái</th><th>Số tiền</th></tr></thead><tbody id="allSessionsBody"></tbody></table></div>
+              <div class="table-empty" id="allSessionsEmpty">Không có lượt chụp phù hợp.</div>
+            </article>
+          </section>
+
+          <section class="admin-view" data-view-panel="frames" hidden>
+            <div class="page-heading" id="frames">
+              <div><p class="eyebrow">Thư viện thiết kế</p><h1>Quản trị khung ảnh</h1><p>Thêm frame riêng cho sự kiện và sử dụng ngay trong photobooth.</p></div>
+              <button class="primary-button" id="focusUploadButton" type="button"><span>＋</span> Thêm frame mới</button>
+            </div>
+            <div class="workspace-grid">
+              <section class="panel upload-panel" id="uploadPanel" aria-labelledby="uploadTitle">
+                <div class="panel-heading"><span class="heading-number">01</span><div><h2 id="uploadTitle">Thêm frame mới</h2><p>Frame sẽ xuất hiện ở bước chọn frame.</p></div></div>
+                <form id="frameUploadForm">
+                  <label class="field"><span>Tên frame <b>*</b></span><input id="customFrameName" name="frameName" type="text" maxlength="40" placeholder="Ví dụ: Đám cưới Minh & An" required /></label>
+                  <label class="field"><span>Bố cục phù hợp <b>*</b></span><select id="customFrameLayout" name="frameLayout"><option value="all">Mọi bố cục</option><option value="single">1 ảnh — 1200×1500</option><option value="strip">Dải 3 ảnh — 900×1800</option><option value="grid">Lưới 4 ảnh — 1200×1600</option></select></label>
+                  <label class="dropzone" id="uploadDropzone" for="customFrameFile"><input id="customFrameFile" name="frameFile" type="file" accept="image/png,image/webp" /><span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5" /></svg></span><strong>Kéo thả hoặc chọn file frame</strong><small>PNG/WebP nền trong suốt · tối đa 8 MB</small></label>
+                  <div class="preview-block"><div class="preview-label"><span>Xem trước</span><small id="previewDimensions"></small></div><div class="frame-preview" id="adminFramePreview"><div class="demo-photo" aria-hidden="true"><span></span></div><img id="adminPreviewImage" alt="Xem trước frame sắp tải lên" /><p id="adminPreviewPlaceholder">Chọn file để xem frame trên ảnh mẫu</p></div></div>
+                  <p class="file-feedback" id="fileFeedback" aria-live="polite"></p>
+                  <div class="form-actions"><button class="reset-button" id="resetFormButton" type="button">Đặt lại</button><button class="primary-button save-button" id="saveFrameButton" type="submit">Lưu vào thư viện</button></div>
+                </form>
+              </section>
+              <section class="panel library-panel" aria-labelledby="libraryTitle">
+                <div class="panel-heading library-heading"><span class="heading-number">02</span><div><h2 id="libraryTitle">Frame đã tải lên</h2><p>Chọn để sử dụng hoặc xóa khỏi thiết bị.</p></div><span class="count-badge" id="libraryCount">0 frame</span></div>
+                <div class="library-grid" id="adminFrameList"></div>
+                <div class="empty-library" id="adminEmpty"><span aria-hidden="true">▧</span><h3>Chưa có frame tùy chỉnh</h3><p>Thêm PNG hoặc WebP đầu tiên để bắt đầu.</p><button type="button" id="emptyUploadButton">Thêm frame đầu tiên</button></div>
+              </section>
+            </div>
+            <section class="design-guide" id="guide" aria-labelledby="guideTitle">
+              <div class="guide-heading"><p class="eyebrow">Kích thước chuẩn</p><h2 id="guideTitle">Hướng dẫn thiết kế frame</h2><p>Xuất file nền trong suốt; vùng trống là nơi ảnh chụp hiển thị.</p></div>
+              <div class="guide-cards"><article><span class="ratio ratio-single"><i></i></span><div><strong>1 ảnh</strong><small>1200 × 1500 px · 4:5</small></div></article><article><span class="ratio ratio-strip"><i></i><i></i><i></i></span><div><strong>Dải 3 ảnh</strong><small>900 × 1800 px · 1:2</small></div></article><article><span class="ratio ratio-grid"><i></i><i></i><i></i><i></i></span><div><strong>Lưới 4 ảnh</strong><small>1200 × 1600 px · 3:4</small></div></article></div>
+            </section>
+          </section>
+
+          <section class="admin-view" data-view-panel="settings" hidden>
+            <div class="page-heading"><div><p class="eyebrow">Cấu hình hệ thống</p><h1>Cài đặt phần mềm</h1><p>Thiết lập thông tin photobooth, giá chụp và bảo mật quản trị.</p></div></div>
+            <div class="settings-grid">
+              <section class="panel settings-card">
+                <div class="settings-card-heading"><span class="settings-icon orange">⚙</span><div><h2>Cài đặt chung</h2><p>Thông tin được áp dụng cho các lượt chụp tiếp theo.</p></div></div>
+                <form id="appSettingsForm">
+                  <label class="field"><span>Tên photobooth</span><input id="boothNameInput" type="text" maxlength="60" placeholder="SnapJoy Photobooth" /></label>
+                  <label class="field"><span>Giá mỗi lượt chụp (VND)</span><input id="pricePerSessionInput" type="number" min="0" step="1000" placeholder="50000" /></label>
+                  <p class="settings-hint">Nếu giá lớn hơn 0, phiên hoàn tất mặc định được đánh dấu “Đã thu”. Bạn có thể điều chỉnh trong mục Lượt chụp.</p>
+                  <button class="primary-button" type="submit">Lưu cài đặt chung</button>
+                </form>
+              </section>
+              <section class="panel settings-card">
+                <div class="settings-card-heading"><span class="settings-icon pink">●</span><div><h2>Đổi mật khẩu admin</h2><p>Mật khẩu mới phải có ít nhất 6 ký tự.</p></div></div>
+                <form id="changePasswordForm">
+                  <label class="field"><span>Mật khẩu hiện tại</span><div class="password-field"><input id="currentPasswordInput" type="password" autocomplete="current-password" required /><button type="button" data-toggle-password="currentPasswordInput" aria-label="Hiện mật khẩu">👁</button></div></label>
+                  <label class="field"><span>Mật khẩu mới</span><div class="password-field"><input id="newPasswordInput" type="password" minlength="6" autocomplete="new-password" required /><button type="button" data-toggle-password="newPasswordInput" aria-label="Hiện mật khẩu">👁</button></div></label>
+                  <label class="field"><span>Xác nhận mật khẩu mới</span><div class="password-field"><input id="confirmNewPasswordInput" type="password" minlength="6" autocomplete="new-password" required /><button type="button" data-toggle-password="confirmNewPasswordInput" aria-label="Hiện mật khẩu">👁</button></div></label>
+                  <p class="form-message" id="passwordMessage" aria-live="polite"></p>
+                  <button class="primary-button" type="submit">Cập nhật mật khẩu</button>
+                </form>
+              </section>
+              <section class="panel settings-card data-card">
+                <div class="settings-card-heading"><span class="settings-icon mint">i</span><div><h2>Dữ liệu và quyền riêng tư</h2><p>SnapJoy đang hoạt động ở chế độ lưu trữ cục bộ.</p></div></div>
+                <ul><li>Ảnh chụp không được tải lên máy chủ.</li><li>Lượt chụp, doanh thu và frame lưu trong IndexedDB.</li><li>Xóa dữ liệu trang web sẽ xóa toàn bộ dữ liệu quản trị.</li></ul>
+              </section>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./admin.js" defer></script>
+  </body>
+</html>
