@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: snapjoy-share
+    name: photobooth-9hn6
     runtime: node
     plan: free
     region: singapore

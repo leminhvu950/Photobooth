@@ -1,9 +1,9 @@
 "use strict";
 
 // Địa chỉ máy chủ chia sẻ QR khi web chạy tách rời khỏi máy chủ đó.
-// Ví dụ đặt "https://snapjoy-share.onrender.com" khi photobooth chạy trên GitHub Pages.
+// Đang trỏ tới service Render của photobooth khi chạy trên GitHub Pages.
 // Để trống "" khi photobooth và máy chủ chia sẻ chạy cùng origin (npm start).
-const SHARE_API_BASE = "";
+const SHARE_API_BASE = "https://photobooth-9hn6.onrender.com";
 
 function shareApiUrl(path) {
   return SHARE_API_BASE ? `${SHARE_API_BASE}${path}` : path;
