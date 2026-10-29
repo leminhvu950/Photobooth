@@ -427,7 +427,7 @@ const server = createServer(async (request, response) => {
       response.end();
       return;
     }
-    if (request.method === "GET" && pathname === "/api/config") {
+    if ((request.method === "GET" || request.method === "HEAD") && pathname === "/api/config") {
       sendJson(response, 200, {
         localSharing: true,
         phoneReady,
@@ -454,12 +454,12 @@ const server = createServer(async (request, response) => {
     }
 
     const sharePageMatch = pathname.match(/^\/share\/([a-f0-9]{32})\/?$/);
-    if (request.method === "GET" && sharePageMatch) {
+    if ((request.method === "GET" || request.method === "HEAD") && sharePageMatch) {
       await serveSharePage(response, sharePageMatch[1]);
       return;
     }
     const shareAssetMatch = pathname.match(/^\/share\/([a-f0-9]{32})\/(photo|video)$/);
-    if (request.method === "GET" && shareAssetMatch) {
+    if ((request.method === "GET" || request.method === "HEAD") && shareAssetMatch) {
       await serveShareAsset(requestUrl, response, shareAssetMatch[1], shareAssetMatch[2]);
       return;
     }
