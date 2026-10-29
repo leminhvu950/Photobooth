@@ -1103,8 +1103,8 @@ function showFrameSelection(direction = "forward") {
   elements.resultView.classList.remove("is-visible");
   
   // Áp dụng lớp layout để frame preview hiển thị đúng tỷ lệ
-  elements.frameStep.classList.remove("layout-single", "layout-strip", "layout-grid");
-  elements.frameStep.classList.add(`layout-${state.layout}`);
+  elements.frameStep.classList.remove("active-layout-single", "active-layout-strip", "active-layout-grid");
+  elements.frameStep.classList.add(`active-layout-${state.layout}`);
 
   activateFlowSlide(elements.frameStep, direction);
   renderFrameLibraries();
