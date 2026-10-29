@@ -148,7 +148,7 @@
         <section class="intro" aria-labelledby="pageTitle">
           <p class="eyebrow">Bước 3/4 · Chụp ảnh</p>
           <h1 id="pageTitle">Cười lên nào! <span aria-hidden="true">✦</span></h1>
-          <p>Frame đã sẵn sàng. Camera chỉ mở ở bước này.</p>
+          <p>Frame đã sẵn sàng. Video tạo dáng sẽ được giữ cục bộ trong lúc chụp.</p>
         </section>
 
         <section class="booth" aria-label="Photobooth">
@@ -158,6 +158,10 @@
             <div class="camera-grid" aria-hidden="true"></div>
             <div class="camera-vignette" aria-hidden="true"></div>
             <div class="flash" id="flash" aria-hidden="true"></div>
+            <div class="recording-indicator" id="recordingIndicator" role="status" hidden>
+              <span aria-hidden="true"></span>
+              Đang quay khoảnh khắc
+            </div>
 
             <div class="welcome-overlay" id="welcomeOverlay">
               <div class="welcome-illustration" aria-hidden="true">
@@ -174,7 +178,7 @@
                 </svg>
                 Mở camera
               </button>
-              <p class="privacy-note">Camera chỉ được xử lý trên thiết bị của bạn.</p>
+              <p class="privacy-note">Camera, ảnh và video chỉ được xử lý trên thiết bị của bạn.</p>
             </div>
 
             <div class="countdown" id="countdown" aria-live="assertive" aria-atomic="true"></div>
@@ -306,12 +310,33 @@
         <div class="result-layout">
           <div class="result-preview">
             <canvas id="resultCanvas" aria-label="Ảnh photobooth đã ghép"></canvas>
+            <div class="pose-video-card" id="poseVideoCard" hidden>
+              <div class="pose-video-heading">
+                <span><i aria-hidden="true"></i> Video tạo dáng</span>
+                <small>Chỉ lưu trên thiết bị này</small>
+              </div>
+              <video id="poseVideoPreview" controls playsinline preload="metadata" aria-label="Video khách tạo dáng"></video>
+            </div>
           </div>
           <div class="result-actions">
             <button class="primary-button large" id="downloadButton" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" /></svg>
               Tải ảnh PNG
             </button>
+            <button class="secondary-button large video-download-button" id="downloadVideoButton" type="button" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" /><rect x="3" y="3" width="18" height="18" rx="3" /></svg>
+              Tải video tạo dáng
+            </button>
+            <button class="secondary-button large qr-share-button" id="qrShareButton" type="button" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM20 14v.01M14 20v.01M20 20v.01" /></svg>
+              <span id="qrShareButtonLabel">Tạo QR tải ảnh</span>
+            </button>
+            <div class="qr-share-panel" id="qrSharePanel" hidden>
+              <p class="qr-share-title">Quét mã để tải về điện thoại</p>
+              <img id="qrCodeImage" alt="Mã QR tải ảnh và video" />
+              <p class="qr-share-expiry" id="qrExpiryText"></p>
+              <a class="qr-share-link" id="qrDownloadLink" href="#" target="_blank" rel="noopener">Mở trang tải trên máy này</a>
+            </div>
             <button class="secondary-button large" id="shareButton" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="m8.3 10.8 7.4-4.5M8.3 13.2l7.4 4.5" /></svg>
               Chia sẻ
@@ -321,7 +346,7 @@
               In ảnh
             </button>
             <button class="text-button" id="retakeButton" type="button">↻ Chụp lại từ đầu</button>
-            <p class="result-privacy">Ảnh chưa từng được tải lên máy chủ — quyền riêng tư luôn thuộc về bạn.</p>
+            <p class="result-privacy">Ảnh và video không được tải lên máy chủ — quyền riêng tư luôn thuộc về bạn.</p>
           </div>
         </div>
       </section>

@@ -1,0 +1,13 @@
+{
+  "name": "snapjoy-photobooth",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-static.mjs",
+    "start": "node scripts/local-share-server.mjs"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
+  }
+}

@@ -73,6 +73,7 @@ const elements = {
   mirrorButton: document.querySelector("#mirrorButton"),
   countdown: document.querySelector("#countdown"),
   flash: document.querySelector("#flash"),
+  recordingIndicator: document.querySelector("#recordingIndicator"),
   poseStatus: document.querySelector("#poseStatus"),
   poseStatusText: document.querySelector("#poseStatusText"),
   poseProgress: document.querySelector("#poseProgress"),
@@ -83,7 +84,16 @@ const elements = {
   fullscreenButton: document.querySelector("#fullscreenButton"),
   resultView: document.querySelector("#resultView"),
   resultCanvas: document.querySelector("#resultCanvas"),
+  poseVideoCard: document.querySelector("#poseVideoCard"),
+  poseVideoPreview: document.querySelector("#poseVideoPreview"),
   downloadButton: document.querySelector("#downloadButton"),
+  downloadVideoButton: document.querySelector("#downloadVideoButton"),
+  qrShareButton: document.querySelector("#qrShareButton"),
+  qrShareButtonLabel: document.querySelector("#qrShareButtonLabel"),
+  qrSharePanel: document.querySelector("#qrSharePanel"),
+  qrCodeImage: document.querySelector("#qrCodeImage"),
+  qrDownloadLink: document.querySelector("#qrDownloadLink"),
+  qrExpiryText: document.querySelector("#qrExpiryText"),
   shareButton: document.querySelector("#shareButton"),
   printButton: document.querySelector("#printButton"),
   retakeButton: document.querySelector("#retakeButton"),
@@ -105,6 +115,11 @@ const state = {
   busy: false,
   cancelled: false,
   photos: [],
+  mediaRecorder: null,
+  recordedVideoChunks: [],
+  poseVideoBlob: null,
+  poseVideoUrl: null,
+  localSharingConfig: null,
   sessionRecorded: false,
   appSettings: { ...DEFAULT_APP_SETTINGS },
   toastTimer: null,
@@ -581,6 +596,107 @@ function beep(frequency = 660, duration = 0.08) {
   }
 }
 
+function preferredVideoMimeType() {
+  if (!window.MediaRecorder || typeof MediaRecorder.isTypeSupported !== "function") return "";
+
+  return [
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm",
+    "video/mp4;codecs=avc1.42E01E",
+    "video/mp4",
+  ].find((type) => MediaRecorder.isTypeSupported(type)) || "";
+}
+
+function clearQrShare() {
+  elements.qrSharePanel.hidden = true;
+  elements.qrCodeImage.removeAttribute("src");
+  elements.qrDownloadLink.removeAttribute("href");
+  elements.qrExpiryText.textContent = "";
+  elements.qrShareButton.disabled = false;
+}
+
+function clearPoseVideo() {
+  clearQrShare();
+  if (state.poseVideoUrl) URL.revokeObjectURL(state.poseVideoUrl);
+  state.poseVideoBlob = null;
+  state.poseVideoUrl = null;
+
+  elements.poseVideoPreview.pause();
+  elements.poseVideoPreview.removeAttribute("src");
+  elements.poseVideoPreview.load();
+  elements.poseVideoCard.hidden = true;
+  elements.downloadVideoButton.hidden = true;
+  elements.qrShareButtonLabel.textContent = "Tạo QR tải ảnh";
+}
+
+function showPoseVideo(blob) {
+  if (state.poseVideoUrl) URL.revokeObjectURL(state.poseVideoUrl);
+  state.poseVideoBlob = blob;
+  state.poseVideoUrl = URL.createObjectURL(blob);
+  elements.poseVideoPreview.src = state.poseVideoUrl;
+  elements.poseVideoCard.hidden = false;
+  elements.downloadVideoButton.hidden = false;
+  elements.qrShareButtonLabel.textContent = "Tạo QR tải ảnh & video";
+}
+
+function startPoseRecording() {
+  clearPoseVideo();
+  if (!window.MediaRecorder || !state.stream?.active) return false;
+
+  try {
+    const mimeType = preferredVideoMimeType();
+    const recorder = new MediaRecorder(state.stream, mimeType ? { mimeType } : undefined);
+    state.recordedVideoChunks = [];
+    recorder.addEventListener("dataavailable", (event) => {
+      if (event.data?.size) state.recordedVideoChunks.push(event.data);
+    });
+    recorder.start(250);
+    state.mediaRecorder = recorder;
+    elements.recordingIndicator.hidden = false;
+    return true;
+  } catch (error) {
+    console.warn("Không thể bắt đầu quay video tạo dáng.", error);
+    state.mediaRecorder = null;
+    state.recordedVideoChunks = [];
+    elements.recordingIndicator.hidden = true;
+    return false;
+  }
+}
+
+async function stopPoseRecording({ discard = false } = {}) {
+  const recorder = state.mediaRecorder;
+  if (!recorder) {
+    elements.recordingIndicator.hidden = true;
+    if (discard) clearPoseVideo();
+    return null;
+  }
+
+  if (recorder.state !== "inactive") {
+    await new Promise((resolve) => {
+      const finish = () => resolve();
+      recorder.addEventListener("stop", finish, { once: true });
+      recorder.addEventListener("error", finish, { once: true });
+      recorder.stop();
+    });
+  }
+
+  const chunks = state.recordedVideoChunks;
+  const type = recorder.mimeType || chunks.find((chunk) => chunk.type)?.type || "video/webm";
+  state.mediaRecorder = null;
+  state.recordedVideoChunks = [];
+  elements.recordingIndicator.hidden = true;
+
+  if (discard || !chunks.length) {
+    if (discard) clearPoseVideo();
+    return null;
+  }
+
+  const blob = new Blob(chunks, { type });
+  showPoseVideo(blob);
+  return blob;
+}
+
 async function runCountdown(seconds) {
   elements.countdown.classList.add("is-visible");
 
@@ -654,6 +770,10 @@ async function startCapture() {
   createProgress(total);
   elements.poseStatus.classList.add("is-visible");
   setCaptureControlsDisabled(true);
+  const recordingStarted = startPoseRecording();
+  if (!recordingStarted) {
+    showToast("Trình duyệt này chưa hỗ trợ quay video — phiên chụp vẫn tiếp tục với ảnh.");
+  }
 
   try {
     for (let index = 0; index < total; index += 1) {
@@ -669,10 +789,12 @@ async function startCapture() {
       if (index + 1 < total) await sleep(1050);
     }
 
+    await stopPoseRecording();
     await composeResult();
     await sleep(300);
     showResult();
   } catch (error) {
+    await stopPoseRecording({ discard: true });
     if (error?.message === "capture-cancelled") {
       showToast("Đã hủy phiên chụp.");
     } else {
@@ -682,6 +804,7 @@ async function startCapture() {
   } finally {
     elements.countdown.classList.remove("is-visible", "is-pulsing");
     elements.poseStatus.classList.remove("is-visible");
+    elements.recordingIndicator.hidden = true;
     state.busy = false;
     setCaptureControlsDisabled(false);
   }
@@ -954,6 +1077,7 @@ function activateFlowSlide(target, direction = "forward") {
 function showLayoutSelection() {
   if (state.busy) return;
   stopCamera();
+  clearPoseVideo();
   elements.resultView.classList.remove("is-visible");
   activateFlowSlide(elements.layoutStep, "backward");
   syncControls();
@@ -1001,6 +1125,7 @@ async function retake() {
   elements.resultView.classList.remove("is-visible");
   activateFlowSlide(elements.captureStep, "backward");
   state.photos = [];
+  clearPoseVideo();
   window.scrollTo({ top: 0, behavior: "smooth" });
   await startCamera(elements.cameraSelect.value);
 }
@@ -1014,6 +1139,12 @@ function canvasToBlob(canvas) {
 function photoFilename() {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   return `snapjoy-${stamp}.png`;
+}
+
+function poseVideoFilename() {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const extension = state.poseVideoBlob?.type.includes("mp4") ? "mp4" : "webm";
+  return `snapjoy-tao-dang-${stamp}.${extension}`;
 }
 
 async function downloadResult() {
@@ -1030,6 +1161,114 @@ async function downloadResult() {
     showToast("Đã tải ảnh xuống thiết bị.");
   } catch {
     showToast("Không thể tải ảnh. Vui lòng thử lại.");
+  }
+}
+
+function downloadPoseVideo() {
+  if (!state.poseVideoBlob) {
+    showToast("Chưa có video tạo dáng để tải xuống.");
+    return;
+  }
+
+  const url = URL.createObjectURL(state.poseVideoBlob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = poseVideoFilename();
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast("Đã tải video tạo dáng xuống thiết bị.");
+}
+
+async function readApiResponse(response, fallbackMessage) {
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    // Máy chủ có thể trả về trang lỗi HTML; dùng thông báo dễ hiểu bên dưới.
+  }
+  if (!response.ok) throw new Error(data?.error || fallbackMessage);
+  return data;
+}
+
+async function detectLocalSharing() {
+  try {
+    const response = await fetch("./api/config", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) return;
+    const config = await response.json();
+    if (!config.localSharing || !config.phoneReady) return;
+    state.localSharingConfig = config;
+    elements.qrShareButton.hidden = false;
+  } catch {
+    // Nút QR chỉ xuất hiện khi ứng dụng chạy qua máy chủ chia sẻ cục bộ.
+  }
+}
+
+async function createQrShare() {
+  if (!state.localSharingConfig) {
+    showToast("Hãy chạy SnapJoy bằng máy chủ chia sẻ cục bộ để tạo mã QR.");
+    return;
+  }
+
+  clearQrShare();
+  elements.qrShareButton.disabled = true;
+  elements.qrShareButtonLabel.textContent = "Đang chuẩn bị mã QR…";
+
+  try {
+    const photoBlob = await canvasToBlob(elements.resultCanvas);
+    const createResponse = await fetch("./api/shares", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        hasVideo: Boolean(state.poseVideoBlob),
+        videoType: state.poseVideoBlob?.type || "",
+      }),
+    });
+    const session = await readApiResponse(createResponse, "Không thể tạo phiên chia sẻ.");
+
+    const uploads = [
+      fetch(session.photoUploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "image/png" },
+        body: photoBlob,
+      }),
+    ];
+    if (state.poseVideoBlob && session.videoUploadUrl) {
+      uploads.push(fetch(session.videoUploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": state.poseVideoBlob.type || "video/webm" },
+        body: state.poseVideoBlob,
+      }));
+    }
+
+    const uploadResponses = await Promise.all(uploads);
+    for (const response of uploadResponses) {
+      await readApiResponse(response, "Không thể gửi ảnh hoặc video tới máy chia sẻ.");
+    }
+
+    const completeResponse = await fetch(session.completeUrl, { method: "POST" });
+    const completed = await readApiResponse(completeResponse, "Không thể hoàn tất mã QR.");
+    const expiresAt = new Date(completed.expiresAt);
+    elements.qrCodeImage.src = completed.qrDataUrl;
+    elements.qrDownloadLink.href = completed.downloadUrl;
+    elements.qrExpiryText.textContent = `Có hiệu lực đến ${expiresAt.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+    elements.qrSharePanel.hidden = false;
+    showToast("Mã QR đã sẵn sàng — điện thoại cần dùng cùng mạng Wi-Fi.");
+  } catch (error) {
+    console.error(error);
+    showToast(error?.message || "Không thể tạo mã QR. Vui lòng thử lại.");
+  } finally {
+    elements.qrShareButton.disabled = false;
+    elements.qrShareButtonLabel.textContent = state.poseVideoBlob
+      ? "Tạo QR tải ảnh & video"
+      : "Tạo QR tải ảnh";
   }
 }
 
@@ -1099,7 +1338,9 @@ function bindEvents() {
   elements.cameraSelect.addEventListener("change", (event) => startCamera(event.target.value));
   elements.captureButton.addEventListener("click", startCapture);
   elements.downloadButton.addEventListener("click", downloadResult);
+  elements.downloadVideoButton.addEventListener("click", downloadPoseVideo);
   elements.shareButton.addEventListener("click", shareResult);
+  elements.qrShareButton.addEventListener("click", createQrShare);
   elements.printButton.addEventListener("click", printResult);
   elements.retakeButton.addEventListener("click", retake);
   elements.fullscreenButton.addEventListener("click", toggleFullscreen);
@@ -1175,6 +1416,7 @@ async function initializeApp() {
   bindEvents();
   await loadCustomFrames();
   syncControls();
+  detectLocalSharing();
   registerServiceWorker();
 }
 

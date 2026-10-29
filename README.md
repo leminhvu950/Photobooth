@@ -1,6 +1,6 @@
 # SnapJoy Photobooth
 
-Một photobooth chạy hoàn toàn trên trình duyệt. Ảnh được xử lý cục bộ và không tải lên máy chủ.
+Một photobooth chạy hoàn toàn trên trình duyệt. Ảnh và video tạo dáng được xử lý cục bộ, không tải lên máy chủ.
 
 ## Chạy thử
 
@@ -15,6 +15,15 @@ python -m http.server 8080
 Sau đó mở `http://localhost:8080` bằng Chrome, Edge hoặc Safari và cấp quyền camera.
 
 Nếu máy đã có Node.js:
+
+```powershell
+npm install
+npm start
+```
+
+`npm start` chạy máy chủ chia sẻ cục bộ (mặc định cổng 8080) và tự build `dist/`. Máy chủ này bật thêm tính năng chia sẻ ảnh/video qua mã QR cho điện thoại.
+
+Nếu chỉ muốn xem nhanh giao diện mà không cần chia sẻ QR:
 
 ```powershell
 npx serve .
@@ -47,8 +56,10 @@ Sau đó mở `http://localhost:8080/` và `http://localhost:8080/admin/`.
 - Camera trực tiếp, chọn camera và lật gương.
 - Bố cục 1 ảnh, dải 3 ảnh hoặc lưới 4 ảnh.
 - Đếm ngược 3/5/10 giây, âm báo và hiệu ứng flash.
+- Tự động quay video không âm thanh trong lúc khách tạo dáng, cho phép xem lại và tải xuống sau phiên chụp.
 - Bốn phong cách màu, bốn kiểu khung (Tối giản, Film, Tình yêu, Lễ hội) và màu khung tùy chỉnh.
 - Xuất PNG chất lượng cao, chia sẻ qua Web Share và in.
+- Chia sẻ ảnh và video sang điện thoại bằng mã QR trong cùng mạng Wi-Fi (cần chạy `npm start`).
 - Lưu tùy chọn trên thiết bị, chạy responsive và hỗ trợ bàn phím.
 - PWA có thể cài lên thiết bị và mở lại offline.
 - Dashboard quản trị tại `/admin/`, có mật khẩu riêng trên thiết bị.
@@ -65,6 +76,17 @@ Sau đó mở `http://localhost:8080/` và `http://localhost:8080/admin/`.
 4. Mở **Khung ảnh** để thêm frame riêng hoặc chọn một frame rồi quay lại photobooth.
 
 Mật khẩu, lịch sử, doanh thu, cài đặt và frame đều được lưu cục bộ trong trình duyệt hiện tại. Đây là lớp khóa dành cho kiosk trên một thiết bị, không thay thế hệ thống tài khoản phía máy chủ. Nếu quên mật khẩu, cần xóa dữ liệu trang web để thiết lập lại; thao tác này cũng xóa lịch sử và frame.
+
+## Chia sẻ ảnh và video qua mã QR
+
+Tính năng chỉ hoạt động khi photobooth chạy bằng `npm start`, vì cần máy chủ cục bộ để lưu tạm file và phát cho điện thoại trong cùng mạng Wi-Fi. Trên GitHub Pages, nút QR sẽ tự ẩn.
+
+1. Chạy `npm start` trên máy photobooth và mở `http://localhost:8080` bằng trình duyệt.
+2. Sau khi chụp xong, ở bước **Nhận ảnh** sẽ có nút **Tạo QR tải ảnh** (kèm video nếu phiên chụp có video tạo dáng). Nếu máy không tìm thấy địa chỉ Wi-Fi, đặt biến môi trường `SNAPJOY_SHARE_HOST` theo IP của máy, ví dụ `SNAPJOY_SHARE_HOST=192.168.1.20`.
+3. Bấm nút, chờ mã QR hiện ra rồi cho khách quét bằng camera điện thoại. Điện thoại phải kết nối cùng mạng Wi-Fi với máy photobooth.
+4. Trang tải cho phép xem và tải ảnh PNG cùng video. Liên kết và file tạm tự hết hạn sau 30 phút và được dọn khỏi máy.
+
+Có thể đổi cổng bằng `SNAPJOY_PORT`, ví dụ `SNAPJOY_PORT=9000`.
 
 ## Thêm khung tùy chỉnh
 
