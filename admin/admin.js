@@ -320,7 +320,7 @@ function formatDateTime(timestamp) {
 }
 
 function layoutName(layout) {
-  return { all: "Mọi bố cục", single: "1 ảnh", strip: "Dải 3 ảnh", grid: "Lưới 4 ảnh" }[layout] || "1 ảnh";
+  return { all: "Mọi bố cục", single: "1 ảnh", strip: "Dải 3 ảnh", strip4: "Dải 4 ảnh", grid: "Lưới 4 ảnh" }[layout] || "1 ảnh";
 }
 
 function paymentLabel(status) {
@@ -547,7 +547,7 @@ function getImageDimensions(dataUrl) {
 }
 
 function ratioWarning(width, height, layout) {
-  const ratios = { single: 1500 / 1000, strip: 800 / 2400, grid: 1100 / 1650 };
+  const ratios = { single: 1500 / 1000, strip: 800 / 2400, strip4: 800 / 3200, grid: 1100 / 1650 };
   if (layout === "all" || !ratios[layout]) return "";
   return Math.abs(width / height - ratios[layout]) > 0.04
     ? `Tỷ lệ file chưa khớp với ${layoutName(layout)}; frame có thể bị kéo giãn.`
@@ -701,7 +701,7 @@ async function prepareFrameFile(file) {
   if (!file) return;
 
   // Cập nhật tỷ lệ khung preview dựa trên layout đã chọn
-  elements.adminFramePreview.parentElement.classList.remove("preview-single", "preview-strip", "preview-grid", "preview-all");
+  elements.adminFramePreview.parentElement.classList.remove("preview-single", "preview-strip", "preview-strip4", "preview-grid", "preview-all");
   elements.adminFramePreview.parentElement.classList.add(`preview-${elements.customFrameLayout.value}`);
 
   if (!["image/png", "image/webp"].includes(file.type)) {
@@ -1142,7 +1142,7 @@ function bindEvents() {
   elements.customFrameFile.addEventListener("change", (event) => prepareFrameFile(event.target.files[0]));
   elements.customFrameLayout.addEventListener("change", () => {
     // Cập nhật tỷ lệ khung preview khi đổi layout
-    elements.adminFramePreview.parentElement.classList.remove("preview-single", "preview-strip", "preview-grid", "preview-all");
+    elements.adminFramePreview.parentElement.classList.remove("preview-single", "preview-strip", "preview-strip4", "preview-grid", "preview-all");
     elements.adminFramePreview.parentElement.classList.add(`preview-${elements.customFrameLayout.value}`);
 
     if (!state.pendingFrame) return;

@@ -224,6 +224,7 @@ svg {
 
 .preview-single .frame-preview { aspect-ratio: 3 / 2; }
 .preview-strip .frame-preview { aspect-ratio: 1 / 3; width: 34%; margin-inline: auto; }
+.preview-strip4 .frame-preview { aspect-ratio: 1 / 4; width: 28%; margin-inline: auto; }
 .preview-grid .frame-preview { aspect-ratio: 2 / 3; width: 80%; margin-inline: auto; }
 .preview-all .frame-preview { aspect-ratio: 4 / 5; }
 

@@ -12,6 +12,7 @@ function shareApiUrl(path) {
 const LAYOUTS = {
   single: { label: "1 ảnh", count: 1 },
   strip: { label: "Dải 3 ảnh", count: 3 },
+  strip4: { label: "Dải 4 ảnh", count: 4 },
   grid: { label: "Lưới 4 ảnh", count: 4 },
 };
 
@@ -33,6 +34,18 @@ const MAIN_PTB_FRAMES = {
       y: (187 + index * 583) / 2400,
       w: 718 / 800,
       h: 530 / 2400,
+    })),
+  },
+  strip4: {
+    source: "./frames/ptb-page-5.png", // Tạm thời dùng chung nền với dải 3 ảnh
+    width: 800,
+    height: 3200,
+    footerTop: 2516,
+    slots: [0, 1, 2, 3].map((index) => ({
+      x: 41 / 800,
+      y: (187 + index * 583) / 3200,
+      w: 718 / 800,
+      h: 530 / 3200,
     })),
   },
   grid: {
@@ -1319,6 +1332,20 @@ async function composeResult() {
     // Mẫu "trang 5" của Bộ khung PTB — dải dọc 1:3 với ba khung ảnh ngang
     canvas.width = 800;
     canvas.height = 2400;
+    const marginX = 41;
+    const gap = 53;
+    const photoHeight = 530;
+    const startY = 187;
+    context.fillStyle = frame;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    state.photos.forEach((photo, index) => {
+      drawPhoto(context, photo, marginX, startY + index * (photoHeight + gap), canvas.width - marginX * 2, photoHeight, 12);
+    });
+    footerTop = startY + state.photos.length * photoHeight + (state.photos.length - 1) * gap;
+  } else if (state.layout === "strip4") {
+    // Dải dọc 1:4
+    canvas.width = 800;
+    canvas.height = 3200;
     const marginX = 41;
     const gap = 53;
     const photoHeight = 530;
