@@ -120,33 +120,42 @@
     return slots;
   }
 
+  function boxesOverlap(a, b) {
+    const x1 = Math.max(a.x, b.x);
+    const y1 = Math.max(a.y, b.y);
+    const x2 = Math.min(a.x + a.w, b.x + b.w);
+    const y2 = Math.min(a.y + a.h, b.y + b.h);
+    if (x2 <= x1 || y2 <= y1) return 0;
+    return ((x2 - x1) * (y2 - y1)) / Math.min(a.w * a.h, b.w * b.h);
+  }
+
   function detectFromImageData(imageData, width, height) {
     const { data } = imageData;
 
-    // 1. Thử dò theo vùng trong suốt (Alpha < Threshold) - Ưu tiên hàng đầu
-    let slots = findSlots(data, width, height, (i) => data[i * 4 + 3] < ALPHA_THRESHOLD);
-    if (slots.length) return sortSlots(slots);
+    // Một file frame có thể vừa có ô trong suốt vừa có ô đục (trắng/đen) do
+    // cách xuất PDF/PNG. Vì vậy phải dò bằng cả ba cách rồi gộp lại, nếu chỉ
+    // dùng cách dò đầu tiên thì các ô còn lại sẽ bị bỏ sót và thiếu ảnh khi ghép.
+    const criteria = [
+      // 1. Ô trong suốt (Alpha < Threshold)
+      (i) => data[i * 4 + 3] < ALPHA_THRESHOLD,
+      // 2. Ô màu trắng đặc (R,G,B > 245)
+      (i) => data[i * 4] > 245 && data[i * 4 + 1] > 245 && data[i * 4 + 2] > 245 && data[i * 4 + 3] > 200,
+      // 3. Ô màu đen đặc (R,G,B < 15)
+      (i) => data[i * 4] < 15 && data[i * 4 + 1] < 15 && data[i * 4 + 2] < 15 && data[i * 4 + 3] > 200,
+    ];
 
-    // 2. Thử dò theo vùng màu trắng đặc (R,G,B > 245) - Dành cho file đục
-    slots = findSlots(data, width, height, (i) => {
-      const r = data[i * 4];
-      const g = data[i * 4 + 1];
-      const b = data[i * 4 + 2];
-      const a = data[i * 4 + 3];
-      return a > 200 && r > 245 && g > 245 && b > 245;
-    });
-    if (slots.length) return sortSlots(slots);
-
-    // 3. Thử dò theo vùng màu đen đặc (R,G,B < 15)
-    slots = findSlots(data, width, height, (i) => {
-      const r = data[i * 4];
-      const g = data[i * 4 + 1];
-      const b = data[i * 4 + 2];
-      const a = data[i * 4 + 3];
-      return a > 200 && r < 15 && g < 15 && b < 15;
+    const boxes = [];
+    criteria.forEach((isCandidate) => {
+      findSlots(data, width, height, isCandidate).forEach((slot) => boxes.push(slot));
     });
 
-    return sortSlots(slots);
+    // Cùng một vùng có thể thoả nhiều tiêu chí — chỉ giữ lại một ô cho mỗi vùng.
+    const unique = [];
+    boxes.forEach((slot) => {
+      if (!unique.some((item) => boxesOverlap(item, slot) > 0.6)) unique.push(slot);
+    });
+
+    return sortSlots(unique);
   }
 
   function loadImage(source) {

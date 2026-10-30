@@ -38,7 +38,7 @@ const MAIN_PTB_FRAMES = {
     })),
   },
   strip4: {
-    source: "./frames/ptb-page-5.png", // Tạm thời dùng chung nền với dải 3 ảnh
+    source: null, // Không dùng chung nền 3 ảnh để tránh che mất ảnh thứ 4
     width: 800,
     height: 3200,
     footerTop: 2516,
@@ -570,17 +570,6 @@ function selectCustomFrame(id) {
 }
 
 function syncControls() {
-  const count = layoutCount();
-  if (elements.captureHint) {
-    elements.captureHint.textContent = `${count} ảnh · đếm ngược ${state.timer} giây`;
-  }
-  if (elements.selectedLayoutLabel) {
-    elements.selectedLayoutLabel.textContent = LAYOUTS[state.layout]?.label || "Tùy chỉnh";
-  }
-  if (elements.frameLayoutContext) {
-    elements.frameLayoutContext.textContent = LAYOUTS[state.layout]?.label || "kiểu tự do";
-  }
-
   document.querySelectorAll("[data-layout]").forEach((button) => {
     const selected = button.dataset.layout === state.layout;
     button.classList.toggle("is-selected", selected);
@@ -641,6 +630,7 @@ function syncControls() {
     : {
         single: "1 lần chụp · tỷ lệ 3:2",
         strip: "3 lần chụp · tỷ lệ 1:3",
+        strip4: "4 lần chụp · tỷ lệ 1:4",
         grid: "4 lần chụp · tỷ lệ 2:3",
       }[state.layout];
   elements.captureLayoutPreview.className = `layout-preview layout-${slots ? "grid" : state.layout}`;
@@ -1232,12 +1222,13 @@ function loadCanvasImage(source) {
 }
 
 // Một số công cụ xuất PDF/PNG làm các ô ảnh thành màu trắng hoặc đen đục.
-// Khi đó frame phải nằm dưới ảnh; frame PNG/WebP có lỗ trong suốt vẫn nằm trên ảnh
-// để giữ lại viền và các chi tiết trang trí.
-function frameSlotsAreOpaque(frameImage, slots) {
+// Hàm trả về cờ cho TỪNG ô: ô đục thì ảnh phải nằm trên frame, ô trong suốt thì
+// frame nằm trên ảnh để giữ viền/bo góc. Không thể kết luận chung cả frame vì file
+// có thể vừa có ô đục vừa có ô trong suốt — kết luận chung sẽ che mất ảnh của ô đục.
+function frameOpaqueSlots(frameImage, slots) {
   const naturalWidth = frameImage.naturalWidth || frameImage.width;
   const naturalHeight = frameImage.naturalHeight || frameImage.height;
-  if (!naturalWidth || !naturalHeight || !slots?.length) return false;
+  if (!naturalWidth || !naturalHeight || !slots?.length) return slots?.map(() => false) || [];
 
   const scale = Math.min(1, 360 / Math.max(naturalWidth, naturalHeight));
   const width = Math.max(1, Math.round(naturalWidth * scale));
@@ -1248,34 +1239,43 @@ function frameSlotsAreOpaque(frameImage, slots) {
   const sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
   sampleContext.drawImage(frameImage, 0, 0, width, height);
 
+  let pixels;
   try {
-    const pixels = sampleContext.getImageData(0, 0, width, height).data;
+    pixels = sampleContext.getImageData(0, 0, width, height).data;
+  } catch {
+    return slots.map(() => false);
+  }
+
+  return slots.map((slot) => {
     let opaqueSamples = 0;
     let totalSamples = 0;
-    slots.forEach((slot) => {
-      for (let row = 1; row <= 5; row += 1) {
-        for (let column = 1; column <= 5; column += 1) {
-          const x = Math.min(width - 1, Math.max(0, Math.round((slot.x + slot.w * column / 6) * width)));
-          const y = Math.min(height - 1, Math.max(0, Math.round((slot.y + slot.h * row / 6) * height)));
-          if (pixels[(y * width + x) * 4 + 3] > 180) opaqueSamples += 1;
-          totalSamples += 1;
-        }
+    for (let row = 1; row <= 5; row += 1) {
+      for (let column = 1; column <= 5; column += 1) {
+        const x = Math.min(width - 1, Math.max(0, Math.round((slot.x + slot.w * column / 6) * width)));
+        const y = Math.min(height - 1, Math.max(0, Math.round((slot.y + slot.h * row / 6) * height)));
+        if (pixels[(y * width + x) * 4 + 3] > 180) opaqueSamples += 1;
+        totalSamples += 1;
       }
-    });
+    }
     return totalSamples > 0 && opaqueSamples / totalSamples > 0.55;
-  } catch {
-    return false;
-  }
+  });
 }
 
 async function composeMainPtbFrame(canvas, context) {
   let layout = state.layout;
   if (layout === "auto") layout = "single"; // Mặc định về single nếu dùng khung PTB ở chế độ auto
   const template = MAIN_PTB_FRAMES[layout] || MAIN_PTB_FRAMES.single;
-  const frameImage = await loadCanvasImage(template.source);
+  // Vài bố cục chưa có file nền riêng (ví dụ dải 4 ảnh), khi đó tự vẽ nền bằng màu
+  // khung thay vì đọc file, nếu không sẽ không tạo được kết quả ảnh nào.
+  const frameImage = template.source ? await loadCanvasImage(template.source) : null;
   canvas.width = template.width;
   canvas.height = template.height;
   context.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!frameImage) {
+    context.fillStyle = state.frameColor;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   template.slots.forEach((slot, index) => {
     const photo = state.photos[index];
@@ -1287,11 +1287,16 @@ async function composeMainPtbFrame(canvas, context) {
       slot.y * canvas.height,
       slot.w * canvas.width,
       slot.h * canvas.height,
-      0,
+      frameImage ? 0 : 12,
     );
   });
-  context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
-  drawFooter(context, canvas, template.footerTop, "#221f1f");
+
+  if (frameImage) {
+    context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    drawFooter(context, canvas, template.footerTop, "#221f1f");
+  } else {
+    drawFooter(context, canvas, template.footerTop, state.frameColor);
+  }
 }
 
 async function composeResult() {
@@ -1315,8 +1320,9 @@ async function composeResult() {
     canvas.height = Math.max(1, Math.round(naturalHeight * scale));
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    const opaqueSlots = frameSlotsAreOpaque(frameImage, slots);
-    if (opaqueSlots) context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    const opaqueSlots = frameOpaqueSlots(frameImage, slots);
+    // Vẽ frame trước làm nền cho những ô đục, nhờ vậy ảnh của ô đó không bị che.
+    context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
 
     slots.forEach((slot, index) => {
       const photo = state.photos[index];
@@ -1328,7 +1334,20 @@ async function composeResult() {
       drawPhoto(context, photo, x, y, width, height, 0);
     });
 
-    if (!opaqueSlots) context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    // Ô trong suốt thì vẽ lại frame đè lên ảnh (chỉ trong phạm vi ô) để giữ viền/bo góc.
+    slots.forEach((slot, index) => {
+      if (opaqueSlots[index]) return;
+      const x = slot.x * canvas.width;
+      const y = slot.y * canvas.height;
+      const width = slot.w * canvas.width;
+      const height = slot.h * canvas.height;
+      context.save();
+      context.beginPath();
+      context.rect(x, y, width, height);
+      context.clip();
+      context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+      context.restore();
+    });
     return;
   }
 
