@@ -116,7 +116,7 @@ Biến môi trường của máy chủ chia sẻ:
 3. Nên dùng ảnh có nền trong suốt và đúng tỷ lệ của bố cục được chọn.
 4. Khung được lưu trong IndexedDB của trình duyệt hiện tại; xóa dữ liệu trang web cũng sẽ xóa các khung này.
 
-Kích thước thiết kế khuyến nghị: `1200×1500` cho 1 ảnh, `900×1800` cho dải 3 ảnh và `1200×1600` cho lưới 4 ảnh. Vùng trong suốt là nơi ảnh chụp sẽ hiện ra.
+Kích thước thiết kế khuyến nghị: `1500×1000` cho 1 ảnh, `800×2400` cho dải 3 ảnh và `1100×1650` cho lưới 4 ảnh. Vùng trong suốt là nơi ảnh chụp sẽ hiện ra.
 
 Khi chạy cục bộ, trang quản trị nằm tại `http://localhost:8080/admin/`. Khi triển khai ở domain gốc, đường dẫn tương ứng là `https://snapjoy.com/admin/`. Hai trang phải cùng domain để dùng chung thư viện IndexedDB.
 

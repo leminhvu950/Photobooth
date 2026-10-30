@@ -56,17 +56,17 @@
         <div class="layout-choice-gallery" role="radiogroup" aria-label="Chọn kiểu ảnh">
           <button class="layout-choice-card is-selected" type="button" data-layout="single" role="radio" aria-checked="true">
             <span class="large-layout-preview large-single" aria-hidden="true"><i></i></span>
-            <span class="layout-choice-info"><strong>1 ảnh</strong><small>Một khoảnh khắc nổi bật</small><em>1 lần chụp · tỷ lệ 4:5</em></span>
+            <span class="layout-choice-info"><strong>1 ảnh</strong><small>Một khoảnh khắc nổi bật</small><em>1 lần chụp · tỷ lệ 3:2</em></span>
             <span class="frame-check" aria-hidden="true">✓</span>
           </button>
           <button class="layout-choice-card" type="button" data-layout="strip" role="radio" aria-checked="false">
             <span class="large-layout-preview large-strip" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span class="layout-choice-info"><strong>Dải 3 ảnh</strong><small>Ba dáng chụp liên tiếp</small><em>3 lần chụp · tỷ lệ 1:2</em></span>
+            <span class="layout-choice-info"><strong>Dải 3 ảnh</strong><small>Ba dáng chụp liên tiếp</small><em>3 lần chụp · tỷ lệ 1:3</em></span>
             <span class="frame-check" aria-hidden="true">✓</span>
           </button>
           <button class="layout-choice-card" type="button" data-layout="grid" role="radio" aria-checked="false">
             <span class="large-layout-preview large-grid" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-            <span class="layout-choice-info"><strong>Lưới 4 ảnh</strong><small>Bốn khoảnh khắc trong một khung</small><em>4 lần chụp · tỷ lệ 3:4</em></span>
+            <span class="layout-choice-info"><strong>Lưới 4 ảnh</strong><small>Bốn khoảnh khắc trong một khung</small><em>4 lần chụp · tỷ lệ 2:3</em></span>
             <span class="frame-check" aria-hidden="true">✓</span>
           </button>
         </div>
@@ -221,7 +221,7 @@
 
           <div class="selected-layout-summary">
             <span class="layout-preview layout-single" id="captureLayoutPreview" aria-hidden="true"><i></i></span>
-            <span><strong id="captureLayoutName">1 ảnh</strong><small id="captureLayoutMeta">1 lần chụp · tỷ lệ 4:5</small></span>
+            <span><strong id="captureLayoutName">1 ảnh</strong><small id="captureLayoutMeta">1 lần chụp · tỷ lệ 3:2</small></span>
             <button type="button" id="changeLayoutButton">Đổi kiểu</button>
           </div>
 
@@ -279,13 +279,13 @@
           <div class="control-section frame-section">
             <label for="frameColor">Màu khung</label>
             <div class="frame-colors" id="frameColors" role="radiogroup" aria-label="Màu khung ảnh">
-              <button type="button" data-color="#fffaf3" class="frame-color cream is-selected" role="radio" aria-checked="true" aria-label="Kem"></button>
+              <button type="button" data-color="#fffaf3" class="frame-color cream" role="radio" aria-checked="false" aria-label="Kem"></button>
               <button type="button" data-color="#f9a8b8" class="frame-color pink" role="radio" aria-checked="false" aria-label="Hồng"></button>
               <button type="button" data-color="#b8e0d2" class="frame-color mint" role="radio" aria-checked="false" aria-label="Xanh bạc hà"></button>
               <button type="button" data-color="#bfdbfe" class="frame-color blue" role="radio" aria-checked="false" aria-label="Xanh da trời"></button>
-              <button type="button" data-color="#171717" class="frame-color black" role="radio" aria-checked="false" aria-label="Đen"></button>
+              <button type="button" data-color="#221F1F" class="frame-color black is-selected" role="radio" aria-checked="true" aria-label="Đen"></button>
             </div>
-            <input id="frameColor" type="color" value="#fffaf3" aria-label="Chọn màu khung tùy chỉnh" />
+            <input id="frameColor" type="color" value="#221F1F" aria-label="Chọn màu khung tùy chỉnh" />
           </div>
 
           <button class="capture-button" id="captureButton" type="button" disabled>

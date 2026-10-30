@@ -524,9 +524,9 @@ svg {
   background: #fff3e8;
 }
 
-.active-layout-single .gallery-frame-preview { aspect-ratio: 4 / 5; }
-.active-layout-strip .gallery-frame-preview { aspect-ratio: 1 / 2; }
-.active-layout-grid .gallery-frame-preview { aspect-ratio: 3 / 4; }
+.active-layout-single .gallery-frame-preview { aspect-ratio: 3 / 2; }
+.active-layout-strip .gallery-frame-preview { aspect-ratio: 1 / 3; width: 30%; margin-inline: auto; }
+.active-layout-grid .gallery-frame-preview { aspect-ratio: 2 / 3; width: 72%; margin-inline: auto; }
 
 .gallery-photo {
   position: absolute;

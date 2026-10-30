@@ -216,9 +216,9 @@ svg {
   transition: aspect-ratio 0.3s ease;
 }
 
-.preview-single .frame-preview { aspect-ratio: 4 / 5; }
-.preview-strip .frame-preview { aspect-ratio: 1 / 2; }
-.preview-grid .frame-preview { aspect-ratio: 3 / 4; }
+.preview-single .frame-preview { aspect-ratio: 3 / 2; }
+.preview-strip .frame-preview { aspect-ratio: 1 / 3; width: 34%; margin-inline: auto; }
+.preview-grid .frame-preview { aspect-ratio: 2 / 3; width: 80%; margin-inline: auto; }
 .preview-all .frame-preview { aspect-ratio: 4 / 5; }
 
 .demo-photo { position: absolute; overflow: hidden; width: 72%; height: 78%; border-radius: 4px; background: linear-gradient(145deg,#c8e2df,#83aaa8); }

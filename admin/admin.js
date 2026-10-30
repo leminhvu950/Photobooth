@@ -520,7 +520,7 @@ function getImageDimensions(dataUrl) {
 }
 
 function ratioWarning(width, height, layout) {
-  const ratios = { single: 1200 / 1500, strip: 900 / 1800, grid: 1200 / 1600 };
+  const ratios = { single: 1500 / 1000, strip: 800 / 2400, grid: 1100 / 1650 };
   if (layout === "all" || !ratios[layout]) return "";
   return Math.abs(width / height - ratios[layout]) > 0.04
     ? `Tỷ lệ file chưa khớp với ${layoutName(layout)}; frame có thể bị kéo giãn.`

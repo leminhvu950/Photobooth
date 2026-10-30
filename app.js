@@ -119,7 +119,7 @@ const state = {
   frameStyle: "minimal",
   customFrameId: null,
   customFrames: [],
-  frameColor: "#fffaf3",
+  frameColor: "#221F1F",
   mirrored: true,
   busy: false,
   cancelled: false,
@@ -416,9 +416,9 @@ function syncControls() {
   elements.frameLayoutContext.textContent = LAYOUTS[state.layout].label;
   elements.captureLayoutName.textContent = LAYOUTS[state.layout].label;
   elements.captureLayoutMeta.textContent = {
-    single: "1 lần chụp · tỷ lệ 4:5",
-    strip: "3 lần chụp · tỷ lệ 1:2",
-    grid: "4 lần chụp · tỷ lệ 3:4",
+    single: "1 lần chụp · tỷ lệ 3:2",
+    strip: "3 lần chụp · tỷ lệ 1:3",
+    grid: "4 lần chụp · tỷ lệ 2:3",
   }[state.layout];
   elements.captureLayoutPreview.className = `layout-preview layout-${state.layout}`;
   elements.captureLayoutPreview.replaceChildren(
@@ -1017,35 +1017,40 @@ async function composeResult() {
   let footerTop;
 
   if (state.layout === "single") {
-    canvas.width = 1200;
-    canvas.height = 1500;
-    const margin = 58;
-    const photoHeight = 1120;
+    // Mẫu "trang 2" của Bộ khung PTB — thẻ ngang 3:2 với một khung ảnh lớn
+    canvas.width = 1500;
+    canvas.height = 1000;
+    const marginX = 50;
+    const marginTop = 44;
+    const photoHeight = 739;
     context.fillStyle = frame;
     context.fillRect(0, 0, canvas.width, canvas.height);
-    drawPhoto(context, state.photos[0], margin, margin, canvas.width - margin * 2, photoHeight, 18);
-    footerTop = margin + photoHeight;
+    drawPhoto(context, state.photos[0], marginX, marginTop, canvas.width - marginX * 2, photoHeight, 18);
+    footerTop = marginTop + photoHeight;
   } else if (state.layout === "strip") {
-    canvas.width = 900;
-    canvas.height = 1800;
-    const margin = 46;
-    const gap = 24;
-    const footerHeight = 226;
-    const photoHeight = (canvas.height - margin * 2 - gap * 2 - footerHeight) / 3;
+    // Mẫu "trang 5" của Bộ khung PTB — dải dọc 1:3 với ba khung ảnh ngang
+    canvas.width = 800;
+    canvas.height = 2400;
+    const marginX = 41;
+    const gap = 53;
+    const photoHeight = 530;
+    const startY = 187;
     context.fillStyle = frame;
     context.fillRect(0, 0, canvas.width, canvas.height);
     state.photos.forEach((photo, index) => {
-      drawPhoto(context, photo, margin, margin + index * (photoHeight + gap), canvas.width - margin * 2, photoHeight, 12);
+      drawPhoto(context, photo, marginX, startY + index * (photoHeight + gap), canvas.width - marginX * 2, photoHeight, 12);
     });
-    footerTop = canvas.height - footerHeight;
+    footerTop = startY + state.photos.length * photoHeight + (state.photos.length - 1) * gap;
   } else {
-    canvas.width = 1200;
-    canvas.height = 1600;
-    const margin = 50;
-    const gap = 24;
-    const footerHeight = 240;
-    const photoWidth = (canvas.width - margin * 2 - gap) / 2;
-    const photoHeight = (canvas.height - margin * 2 - gap - footerHeight) / 2;
+    // Mẫu "trang 13" của Bộ khung PTB — lưới 2x2 dọc 2:3
+    canvas.width = 1100;
+    canvas.height = 1650;
+    const marginX = 37;
+    const gapX = 36;
+    const gapY = 27;
+    const startY = 61;
+    const photoHeight = 637;
+    const photoWidth = (canvas.width - marginX * 2 - gapX) / 2;
     context.fillStyle = frame;
     context.fillRect(0, 0, canvas.width, canvas.height);
     state.photos.forEach((photo, index) => {
@@ -1054,14 +1059,14 @@ async function composeResult() {
       drawPhoto(
         context,
         photo,
-        margin + column * (photoWidth + gap),
-        margin + row * (photoHeight + gap),
+        marginX + column * (photoWidth + gapX),
+        startY + row * (photoHeight + gapY),
         photoWidth,
         photoHeight,
         14,
       );
     });
-    footerTop = canvas.height - footerHeight;
+    footerTop = startY + 2 * photoHeight + gapY;
   }
 
   drawFooter(context, canvas, footerTop, frame);

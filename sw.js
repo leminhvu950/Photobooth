@@ -1,4 +1,4 @@
-const CACHE_NAME = "snapjoy-v9";
+const CACHE_NAME = "snapjoy-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
