@@ -106,6 +106,7 @@ Biến môi trường của máy chủ chia sẻ:
 | `SNAPJOY_PUBLIC_URL` | Địa chỉ công khai ghi vào mã QR. Trên Render tự dùng `RENDER_EXTERNAL_URL`. |
 | `SNAPJOY_SHARE_HOST` | Địa chỉ ghi vào mã QR ở chế độ cục bộ, ví dụ `192.168.1.20`. |
 | `SNAPJOY_ALLOWED_ORIGIN` | Các origin được phép gọi API, phân tách bằng dấu phẩy; mặc định `*`. |
+| `SNAPJOY_DATA_DIR` | Thư mục lưu thư viện frame dùng chung (`frames.json`), mặc định là `data/` trong project. |
 
 Ở chế độ công khai, ảnh và video được tải lên host trong thời gian ngắn (tối đa 30 phút) trước khi bị xóa. Gói free của Render sẽ "ngủ" sau khoảng 15 phút không dùng, nên lần bấm QR đầu tiên có thể phải chờ máy chủ khởi động lại.
 
@@ -114,9 +115,13 @@ Biến môi trường của máy chủ chia sẻ:
 1. Mở `/admin/`, đăng nhập hoặc tạo mật khẩu ở lần dùng đầu tiên, rồi chọn **Khung ảnh**.
 2. Đặt tên, chọn bố cục phù hợp và tải file PNG/WebP tối đa 8 MB.
 3. Nên dùng ảnh có nền trong suốt và đúng tỷ lệ của bố cục được chọn.
-4. Khung được lưu trong IndexedDB của trình duyệt hiện tại; xóa dữ liệu trang web cũng sẽ xóa các khung này.
+4. Khung được lưu trong IndexedDB của trình duyệt và tự động gửi lên máy chủ chia sẻ, nên mọi thiết bị mở photobooth đều thấy và dùng được ngay, không cần nhập lại.
 
 Kích thước thiết kế khuyến nghị: `1500×1000` cho 1 ảnh, `800×2400` cho dải 3 ảnh và `1100×1650` cho lưới 4 ảnh. Vùng trong suốt là nơi ảnh chụp sẽ hiện ra.
+
+Bấm **Đồng bộ máy chủ** trong `/admin/` để gửi toàn bộ khung cục bộ lên máy chủ và tải về các khung đang có trên đó. Khi không kết nối được máy chủ, khung vẫn dùng được trên thiết bị hiện tại; dùng **Xuất file** / **Nhập file** để mang khung sang máy khác thủ công.
+
+Máy chủ chia sẻ lưu thư viện khung tại `data/frames.json`. Gói free của Render có ổ đĩa tạm nên thư viện này có thể mất khi deploy lại.
 
 Khi chạy cục bộ, trang quản trị nằm tại `http://localhost:8080/admin/`. Khi triển khai ở domain gốc, đường dẫn tương ứng là `https://snapjoy.com/admin/`. Hai trang phải cùng domain để dùng chung thư viện IndexedDB.
 

@@ -188,6 +188,8 @@ svg {
 .ghost-button { padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: white; font-size: .53rem; font-weight: 700; }
 .ghost-button:hover { color: var(--ink); background: var(--cream); }
 .library-hint { margin: -12px 0 16px; color: var(--muted); font-size: .52rem; line-height: 1.55; }
+.library-hint.is-warning { color: #b8791a; }
+.library-hint.is-error { color: #c0392b; }
 
 .field { display: block; margin-bottom: 13px; }
 .field > span { display: block; margin-bottom: 6px; font-size: .61rem; font-weight: 700; }

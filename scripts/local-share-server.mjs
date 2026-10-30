@@ -19,6 +19,12 @@ const port = Number.isInteger(configuredPort) && configuredPort > 0 ? configured
 const shareLifetimeMs = 30 * 60 * 1000;
 const maxPhotoBytes = 25 * 1024 * 1024;
 const maxVideoBytes = 150 * 1024 * 1024;
+const maxFrameBytes = 12 * 1024 * 1024;
+const maxFrameSlots = 60;
+const dataRoot = process.env.SNAPJOY_DATA_DIR
+  ? path.resolve(process.env.SNAPJOY_DATA_DIR)
+  : path.join(projectRoot, "data");
+const framesFile = path.join(dataRoot, "frames.json");
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -393,6 +399,110 @@ async function serveStatic(requestUrl, response) {
   createReadStream(filePath).pipe(response);
 }
 
+// ---- Thư viện frame dùng chung -------------------------------------------
+// Frame do quản trị viên tải lên được lưu vào data/frames.json để mọi thiết bị
+// mở photobooth đều tự tải về, không cần nhập lại trên từng máy.
+let frameStore = null;
+
+function clampUnit(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.min(Math.max(number, 0), 1);
+}
+
+function sanitizeFrame(input) {
+  if (!input || typeof input !== "object") return null;
+  if (typeof input.dataUrl !== "string" || !input.dataUrl.startsWith("data:image/")) return null;
+  const width = Number(input.width);
+  const height = Number(input.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+  const slots = Array.isArray(input.slots)
+    ? input.slots
+        .filter((slot) => slot && Number(slot.w) > 0 && Number(slot.h) > 0)
+        .slice(0, maxFrameSlots)
+        .map((slot) => ({ x: clampUnit(slot.x), y: clampUnit(slot.y), w: clampUnit(slot.w), h: clampUnit(slot.h) }))
+    : [];
+  const createdAt = Number(input.createdAt);
+  return {
+    id: typeof input.id === "string" && /^[a-zA-Z0-9-]{6,64}$/.test(input.id)
+      ? input.id
+      : randomBytes(12).toString("hex"),
+    name: (typeof input.name === "string" && input.name.trim() ? input.name.trim() : "Frame").slice(0, 60),
+    layout: ["single", "strip", "grid", "all"].includes(input.layout) ? input.layout : "all",
+    dataUrl: input.dataUrl,
+    width: Math.round(width),
+    height: Math.round(height),
+    slots,
+    createdAt: Number.isFinite(createdAt) && createdAt > 0 ? createdAt : Date.now(),
+  };
+}
+
+async function loadFrameStore() {
+  if (frameStore) return frameStore;
+  try {
+    const parsed = JSON.parse(await readFile(framesFile, "utf8"));
+    frameStore = {
+      frames: Array.isArray(parsed?.frames) ? parsed.frames.map(sanitizeFrame).filter(Boolean) : [],
+      updatedAt: Number(parsed?.updatedAt) || 0,
+    };
+  } catch {
+    frameStore = { frames: [], updatedAt: 0 };
+  }
+  return frameStore;
+}
+
+async function saveFrameStore() {
+  await mkdir(dataRoot, { recursive: true });
+  const temporaryPath = `${framesFile}.${randomBytes(4).toString("hex")}.tmp`;
+  await writeFile(temporaryPath, JSON.stringify(frameStore), "utf8");
+  await rename(temporaryPath, framesFile);
+}
+
+async function sendFrameList(response) {
+  const store = await loadFrameStore();
+  sendJson(response, 200, { frames: store.frames, updatedAt: store.updatedAt });
+}
+
+async function saveSharedFrame(request, response) {
+  let body;
+  try {
+    body = await readJsonBody(request, maxFrameBytes);
+  } catch (error) {
+    const tooLarge = error?.code === "BODY_TOO_LARGE";
+    sendJson(response, tooLarge ? 413 : 400, {
+      error: tooLarge ? "Frame vượt quá dung lượng cho phép." : "Dữ liệu frame không hợp lệ.",
+    });
+    return;
+  }
+
+  const frame = sanitizeFrame(body?.frame ?? body);
+  if (!frame) {
+    sendJson(response, 400, { error: "Dữ liệu frame không hợp lệ." });
+    return;
+  }
+
+  const store = await loadFrameStore();
+  const index = store.frames.findIndex((item) => item.id === frame.id);
+  if (index >= 0) store.frames[index] = frame;
+  else store.frames.push(frame);
+  store.updatedAt = Date.now();
+  await saveFrameStore();
+  sendJson(response, index >= 0 ? 200 : 201, { frame, total: store.frames.length });
+}
+
+async function removeSharedFrame(response, id) {
+  const store = await loadFrameStore();
+  const remaining = store.frames.filter((item) => item.id !== id);
+  if (remaining.length === store.frames.length) {
+    sendJson(response, 404, { error: "Không tìm thấy frame." });
+    return;
+  }
+  store.frames = remaining;
+  store.updatedAt = Date.now();
+  await saveFrameStore();
+  sendJson(response, 200, { removed: id, total: store.frames.length });
+}
+
 async function cleanupExpiredShares() {
   let entries = [];
   try {
@@ -420,7 +530,7 @@ const server = createServer(async (request, response) => {
     applyCors(request, response);
     if (request.method === "OPTIONS") {
       response.writeHead(204, {
-        "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Max-Age": "86400",
       });
@@ -435,6 +545,19 @@ const server = createServer(async (request, response) => {
         hosted: hostedPublicly,
         expiresInMinutes: shareLifetimeMs / 60_000,
       });
+      return;
+    }
+    if ((request.method === "GET" || request.method === "HEAD") && pathname === "/api/frames") {
+      await sendFrameList(response);
+      return;
+    }
+    if (request.method === "POST" && pathname === "/api/frames") {
+      await saveSharedFrame(request, response);
+      return;
+    }
+    const frameMatch = pathname.match(/^\/api\/frames\/([a-zA-Z0-9-]{6,64})$/);
+    if (request.method === "DELETE" && frameMatch) {
+      await removeSharedFrame(response, frameMatch[1]);
       return;
     }
     if (request.method === "POST" && pathname === "/api/shares") {

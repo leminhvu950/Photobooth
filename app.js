@@ -253,6 +253,38 @@ async function readCustomFrames() {
   });
 }
 
+async function writeCustomFrame(frame) {
+  const database = await openFrameDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(FRAME_DATABASE.store, "readwrite");
+    transaction.objectStore(FRAME_DATABASE.store).put(frame);
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error || new Error("Không thể lưu khung xuống thiết bị."));
+    };
+  });
+}
+
+async function deleteCustomFrame(id) {
+  const database = await openFrameDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(FRAME_DATABASE.store, "readwrite");
+    transaction.objectStore(FRAME_DATABASE.store).delete(id);
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error || new Error("Không thể xóa khung khỏi thiết bị."));
+    };
+  });
+}
+
 async function storeCaptureSession(session) {
   const database = await openFrameDatabase();
   return new Promise((resolve, reject) => {
@@ -377,6 +409,85 @@ async function loadCustomFrames() {
   }
   renderFrameLibraries();
   refreshFrameSlots();
+}
+
+// ---- Thư viện frame dùng chung của máy chủ chia sẻ ------------------------
+// Máy chủ là nguồn chuẩn: frame thêm ở một máy sẽ tự xuất hiện trên mọi thiết bị.
+const SHARED_FRAME_ORIGIN = "server";
+let lastSharedFrameSyncAt = 0;
+
+function frameSignature(frame) {
+  return [
+    frame.name,
+    frame.layout,
+    frame.width,
+    frame.height,
+    frame.createdAt,
+    frame.slots?.length || 0,
+    frame.dataUrl?.length || 0,
+  ].join("|");
+}
+
+async function mergeSharedFrames(sharedFrames) {
+  const incoming = new Map();
+  sharedFrames.forEach((frame) => {
+    if (frame && typeof frame.id === "string" && typeof frame.dataUrl === "string") incoming.set(frame.id, frame);
+  });
+
+  const removed = state.customFrames.filter(
+    (frame) => frame.origin === SHARED_FRAME_ORIGIN && !incoming.has(frame.id),
+  );
+  await Promise.all(removed.map((frame) => deleteCustomFrame(frame.id).catch(() => {})));
+
+  let changed = removed.length > 0;
+  const next = state.customFrames.filter(
+    (frame) => frame.origin !== SHARED_FRAME_ORIGIN || incoming.has(frame.id),
+  );
+  const writes = [];
+
+  incoming.forEach((frame, id) => {
+    const record = { ...frame, origin: SHARED_FRAME_ORIGIN };
+    const index = next.findIndex((item) => item.id === id);
+    if (index < 0) {
+      next.push(record);
+      writes.push(record);
+      changed = true;
+      return;
+    }
+    if (frameSignature(next[index]) !== frameSignature(record)) {
+      next[index] = record;
+      writes.push(record);
+      changed = true;
+    }
+  });
+
+  if (!changed) return;
+  await Promise.all(writes.map((frame) => writeCustomFrame(frame).catch(() => {})));
+  state.customFrames = next.sort((a, b) => b.createdAt - a.createdAt);
+  if (state.customFrameId && !getSelectedCustomFrame()) {
+    state.customFrameId = null;
+    savePreferences();
+  }
+  renderFrameLibraries();
+  refreshFrameSlots();
+}
+
+async function syncSharedFrames() {
+  if (!SHARE_API_BASE) return;
+  const now = Date.now();
+  if (now - lastSharedFrameSyncAt < 30_000) return;
+  lastSharedFrameSyncAt = now;
+  try {
+    const response = await fetch(shareApiUrl("/api/frames"), {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
+    await mergeSharedFrames(Array.isArray(payload?.frames) ? payload.frames : []);
+  } catch {
+    // Máy chủ chia sẻ chưa sẵn sàng: vẫn dùng frame đang lưu trên thiết bị.
+  }
 }
 
 function selectBuiltInFrame(style) {
@@ -1520,6 +1631,10 @@ async function initializeApp() {
   await loadCustomFrames();
   syncControls();
   detectLocalSharing();
+  syncSharedFrames();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) syncSharedFrames();
+  });
   registerServiceWorker();
 }
 

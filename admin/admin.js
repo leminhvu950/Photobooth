@@ -19,6 +19,14 @@ const DEFAULT_SETTINGS = {
   pricePerSession: 0,
 };
 
+// Phải khớp với SHARE_API_BASE trong app.js để admin và photobooth dùng chung một máy chủ.
+const SHARE_API_BASE = "https://photobooth-9hn6.onrender.com";
+const SHARED_FRAME_ORIGIN = "server";
+
+function shareApiUrl(path) {
+  return `${SHARE_API_BASE}${path}`;
+}
+
 const elements = {
   authScreen: document.querySelector("#authScreen"),
   adminApp: document.querySelector("#adminApp"),
@@ -73,6 +81,8 @@ const elements = {
   exportFramesButton: document.querySelector("#exportFramesButton"),
   importFramesButton: document.querySelector("#importFramesButton"),
   importFramesFile: document.querySelector("#importFramesFile"),
+  syncFramesButton: document.querySelector("#syncFramesButton"),
+  frameSyncStatus: document.querySelector("#frameSyncStatus"),
   adminFrameList: document.querySelector("#adminFrameList"),
   libraryCount: document.querySelector("#libraryCount"),
   focusUploadButton: document.querySelector("#focusUploadButton"),
@@ -756,6 +766,9 @@ async function saveFrame(event) {
     renderDashboard();
     resetFrameForm();
     showToast(`Đã thêm frame “${frame.name}”.`);
+    void pushFrame(frame).then((ok) => {
+      if (ok) setSyncStatus(`Đã gửi frame “${frame.name}” lên máy chủ chia sẻ.`);
+    });
   } catch (error) {
     console.error(error);
     setFileFeedback("Không thể lưu frame. Bộ nhớ trình duyệt có thể đã đầy.", "error");
@@ -766,9 +779,10 @@ async function saveFrame(event) {
 }
 
 async function removeFrame(frame) {
-  if (!window.confirm(`Xóa frame “${frame.name}” khỏi thiết bị này?`)) return;
+  if (!window.confirm(`Xóa frame “${frame.name}” khỏi máy chủ chia sẻ và thiết bị này?`)) return;
   try {
     await deleteRecord(DATABASE.frames, frame.id);
+    void deleteFrameOnServer(frame.id);
     state.frames = state.frames.filter((item) => item.id !== frame.id);
     const preferences = readJson(STORAGE_KEYS.preferences, {});
     if (preferences.customFrameId === frame.id) {
@@ -791,6 +805,109 @@ function useFrame(frame) {
   if (frame.layout !== "all") preferences.layout = frame.layout;
   writeJson(STORAGE_KEYS.preferences, preferences);
   window.location.href = "../";
+}
+
+function setSyncStatus(message, tone = "") {
+  if (!elements.frameSyncStatus) return;
+  elements.frameSyncStatus.textContent = message;
+  elements.frameSyncStatus.classList.toggle("is-warning", tone === "warning");
+  elements.frameSyncStatus.classList.toggle("is-error", tone === "error");
+}
+
+function sameFrame(a, b) {
+  return (
+    a.name === b.name
+    && a.layout === b.layout
+    && a.createdAt === b.createdAt
+    && a.width === b.width
+    && a.height === b.height
+    && (a.slots?.length || 0) === (b.slots?.length || 0)
+    && a.dataUrl.length === b.dataUrl.length
+  );
+}
+
+async function pushFrameToServer(frame) {
+  const response = await fetch(shareApiUrl("/api/frames"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ frame }),
+  });
+  return response.ok;
+}
+
+// Gửi frame lên máy chủ; thành công thì ghi dấu để biết frame này do máy chủ quản lý.
+async function pushFrame(frame) {
+  const sent = await pushFrameToServer(frame).catch(() => false);
+  if (sent && frame.origin !== SHARED_FRAME_ORIGIN) {
+    frame.origin = SHARED_FRAME_ORIGIN;
+    await putRecord(DATABASE.frames, frame).catch(() => {});
+  }
+  return sent;
+}
+
+async function deleteFrameOnServer(id) {
+  try {
+    await fetch(shareApiUrl(`/api/frames/${encodeURIComponent(id)}`), { method: "DELETE" });
+  } catch {
+    // Không kết nối được máy chủ: frame vẫn được xóa khỏi thiết bị này.
+  }
+}
+
+async function pullFramesFromServer() {
+  const response = await fetch(shareApiUrl("/api/frames"), {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const payload = await response.json();
+  return Array.isArray(payload?.frames) ? payload.frames : [];
+}
+
+async function applyRemoteFrames(remoteFrames) {
+  const remoteIds = new Set();
+  for (const item of remoteFrames) {
+    if (!isFrameRecord(item) || typeof item.id !== "string") continue;
+    remoteIds.add(item.id);
+    const record = { ...item, origin: SHARED_FRAME_ORIGIN };
+    const existing = state.frames.find((frame) => frame.id === record.id);
+    if (existing && sameFrame(existing, record)) continue;
+    await putRecord(DATABASE.frames, record);
+    state.frames = existing
+      ? state.frames.map((frame) => (frame.id === record.id ? record : frame))
+      : [...state.frames, record];
+  }
+
+  const stale = state.frames.filter((frame) => frame.origin === SHARED_FRAME_ORIGIN && !remoteIds.has(frame.id));
+  for (const frame of stale) await deleteRecord(DATABASE.frames, frame.id);
+  const staleIds = new Set(stale.map((frame) => frame.id));
+  state.frames = state.frames.filter((frame) => !staleIds.has(frame.id));
+  state.frames.sort((a, b) => b.createdAt - a.createdAt);
+  renderFrames();
+  renderDashboard();
+  return { removed: stale.length, total: remoteIds.size };
+}
+
+async function syncAllFrames(announce = false) {
+  elements.syncFramesButton.disabled = true;
+  try {
+    let pushed = 0;
+    for (const frame of [...state.frames]) {
+      if (await pushFrame(frame)) pushed += 1;
+    }
+    const remote = await pullFramesFromServer();
+    const result = await applyRemoteFrames(remote);
+    setSyncStatus(
+      `Đã kết nối máy chủ · ${pushed} frame đã gửi · ${result.total} frame đang có trên máy chủ`
+      + `${result.removed ? ` · đã gỡ ${result.removed} frame không còn trên máy chủ` : ""}.`,
+    );
+    if (announce) showToast(`Đã đồng bộ ${result.total} frame từ máy chủ.`);
+  } catch (error) {
+    console.error(error);
+    setSyncStatus("Không kết nối được máy chủ chia sẻ. Frame vẫn dùng được trên thiết bị này.", "warning");
+    if (announce) showToast("Không kết nối được máy chủ chia sẻ.");
+  } finally {
+    elements.syncFramesButton.disabled = false;
+  }
 }
 
 function exportFrames() {
@@ -858,6 +975,7 @@ async function importFrames(file) {
         createdAt: Number(item.createdAt) || Date.now(),
       };
       await putRecord(DATABASE.frames, frame);
+      void pushFrame(frame);
       if (existing) {
         updated += 1;
         state.frames = state.frames.map((current) => (current.id === frame.id ? frame : current));
@@ -962,6 +1080,7 @@ async function loadAdminData() {
   renderFrames();
   renderDashboard();
   renderSessions();
+  void syncAllFrames();
 }
 
 function togglePassword(button) {
@@ -1004,6 +1123,7 @@ function bindEvents() {
     const warning = ratioWarning(state.pendingFrame.width, state.pendingFrame.height, elements.customFrameLayout.value);
     setFileFeedback(warning || `Kích thước ${state.pendingFrame.width}×${state.pendingFrame.height}px phù hợp.`, warning ? "warning" : "");
   });
+  elements.syncFramesButton.addEventListener("click", () => syncAllFrames(true));
   elements.exportFramesButton.addEventListener("click", exportFrames);
   elements.importFramesButton.addEventListener("click", () => elements.importFramesFile.click());
   elements.importFramesFile.addEventListener("change", async () => {

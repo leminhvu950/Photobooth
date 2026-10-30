@@ -1,5 +1,6 @@
 dist/
 .snapjoy-shares/
+data/
 node_modules/
 .DS_Store
 Thumbs.db
