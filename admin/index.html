@@ -177,7 +177,8 @@
                 <p class="settings-hint">Mẹo: đặt các ô ảnh thành vùng <strong>trong suốt</strong> trong file thiết kế — SnapJoy sẽ tự dò và bạn chỉnh lại được ở khung “Vùng ảnh” phía trên.</p>
               </section>
               <section class="panel library-panel" aria-labelledby="libraryTitle">
-                <div class="panel-heading library-heading"><span class="heading-number">02</span><div><h2 id="libraryTitle">Frame đã tải lên</h2><p>Chọn để sử dụng hoặc xóa khỏi thiết bị.</p></div><span class="count-badge" id="libraryCount">0 frame</span></div>
+                <div class="panel-heading library-heading"><span class="heading-number">02</span><div><h2 id="libraryTitle">Frame đã tải lên</h2><p>Chọn để sử dụng hoặc xóa khỏi thiết bị.</p></div><div class="library-tools"><span class="count-badge" id="libraryCount">0 frame</span><button type="button" class="ghost-button" id="exportFramesButton">Xuất file</button><button type="button" class="ghost-button" id="importFramesButton">Nhập file</button><input id="importFramesFile" type="file" accept="application/json,.json" hidden /></div></div>
+                <p class="library-hint">Frame được lưu trên từng thiết bị. Dùng <strong>Xuất file</strong> rồi <strong>Nhập file</strong> ở thiết bị khác để mang frame sang (kèm cả vùng ảnh đã chỉnh).</p>
                 <div class="library-grid" id="adminFrameList"></div>
                 <div class="empty-library" id="adminEmpty"><span aria-hidden="true">▧</span><h3>Chưa có frame tùy chỉnh</h3><p>Thêm PNG hoặc WebP đầu tiên để bắt đầu.</p><button type="button" id="emptyUploadButton">Thêm frame đầu tiên</button></div>
               </section>

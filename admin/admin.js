@@ -70,6 +70,9 @@ const elements = {
   slotRedetectButton: document.querySelector("#slotRedetectButton"),
   slotAddButton: document.querySelector("#slotAddButton"),
   slotRemoveButton: document.querySelector("#slotRemoveButton"),
+  exportFramesButton: document.querySelector("#exportFramesButton"),
+  importFramesButton: document.querySelector("#importFramesButton"),
+  importFramesFile: document.querySelector("#importFramesFile"),
   adminFrameList: document.querySelector("#adminFrameList"),
   libraryCount: document.querySelector("#libraryCount"),
   focusUploadButton: document.querySelector("#focusUploadButton"),
@@ -790,6 +793,89 @@ function useFrame(frame) {
   window.location.href = "../";
 }
 
+function exportFrames() {
+  if (!state.frames.length) {
+    showToast("Chưa có frame nào để xuất.");
+    return;
+  }
+  const payload = {
+    app: "snapjoy-photobooth",
+    kind: "frames",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    frames: state.frames,
+  };
+  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = `snapjoy-frames-${stamp}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast(`Đã xuất ${state.frames.length} frame.`);
+}
+
+function isFrameRecord(item) {
+  return (
+    item &&
+    typeof item === "object" &&
+    typeof item.dataUrl === "string" &&
+    item.dataUrl.startsWith("data:image/") &&
+    Number(item.width) > 0 &&
+    Number(item.height) > 0
+  );
+}
+
+async function importFrames(file) {
+  let payload;
+  try {
+    payload = JSON.parse(await file.text());
+  } catch (error) {
+    console.error(error);
+    showToast("File không phải JSON hợp lệ.");
+    return;
+  }
+  const incoming = (Array.isArray(payload) ? payload : payload?.frames)?.filter(isFrameRecord);
+  if (!incoming?.length) {
+    showToast("File này không chứa frame SnapJoy nào.");
+    return;
+  }
+
+  let added = 0;
+  let updated = 0;
+  try {
+    for (const item of incoming) {
+      const existing = state.frames.find((frame) => frame.id === item.id);
+      const frame = {
+        id: typeof item.id === "string" && item.id ? item.id : `frame-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: typeof item.name === "string" && item.name.trim() ? item.name.trim() : "Frame nhập",
+        layout: ["single", "strip", "grid", "all"].includes(item.layout) ? item.layout : "all",
+        dataUrl: item.dataUrl,
+        width: Number(item.width),
+        height: Number(item.height),
+        slots: Array.isArray(item.slots) ? window.SnapJoySlots.round(item.slots.filter((slot) => slot && slot.w > 0 && slot.h > 0)) : [],
+        createdAt: Number(item.createdAt) || Date.now(),
+      };
+      await putRecord(DATABASE.frames, frame);
+      if (existing) {
+        updated += 1;
+        state.frames = state.frames.map((current) => (current.id === frame.id ? frame : current));
+      } else {
+        added += 1;
+        state.frames.unshift(frame);
+      }
+    }
+    state.frames.sort((a, b) => b.createdAt - a.createdAt);
+    renderFrames();
+    renderDashboard();
+    showToast(`Đã nhập ${added} frame mới${updated ? `, cập nhật ${updated} frame trùng` : ""}.`);
+  } catch (error) {
+    console.error(error);
+    showToast("Không thể lưu frame vào thiết bị. Bộ nhớ trình duyệt có thể đã đầy.");
+  }
+}
+
 function loadSettings() {
   state.settings = { ...DEFAULT_SETTINGS, ...readJson(STORAGE_KEYS.settings, {}) };
   state.settings.pricePerSession = Math.max(0, Number(state.settings.pricePerSession) || 0);
@@ -917,6 +1003,13 @@ function bindEvents() {
     }
     const warning = ratioWarning(state.pendingFrame.width, state.pendingFrame.height, elements.customFrameLayout.value);
     setFileFeedback(warning || `Kích thước ${state.pendingFrame.width}×${state.pendingFrame.height}px phù hợp.`, warning ? "warning" : "");
+  });
+  elements.exportFramesButton.addEventListener("click", exportFrames);
+  elements.importFramesButton.addEventListener("click", () => elements.importFramesFile.click());
+  elements.importFramesFile.addEventListener("change", async () => {
+    const [file] = elements.importFramesFile.files || [];
+    elements.importFramesFile.value = "";
+    if (file) await importFrames(file);
   });
   elements.slotRedetectButton.addEventListener("click", () => {
     if (!state.pendingFrame) return;

@@ -184,6 +184,10 @@ svg {
 .panel-heading p { margin: 4px 0 0; color: var(--muted); font-size: .56rem; line-height: 1.5; }
 .library-heading > div { flex: 1; min-width: 0; }
 .count-badge { padding: 5px 9px; border-radius: 999px; color: var(--orange-dark); background: var(--cream); font-size: .54rem; font-weight: 700; }
+.library-heading > .library-tools { display: flex; flex: 0 0 auto; align-items: center; flex-wrap: wrap; gap: 6px; }
+.ghost-button { padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: white; font-size: .53rem; font-weight: 700; }
+.ghost-button:hover { color: var(--ink); background: var(--cream); }
+.library-hint { margin: -12px 0 16px; color: var(--muted); font-size: .52rem; line-height: 1.55; }
 
 .field { display: block; margin-bottom: 13px; }
 .field > span { display: block; margin-bottom: 6px; font-size: .61rem; font-weight: 700; }
