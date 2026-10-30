@@ -14,6 +14,7 @@ const LAYOUTS = {
   strip: { label: "Dải 3 ảnh", count: 3 },
   strip4: { label: "Dải 4 ảnh", count: 4 },
   grid: { label: "Lưới 4 ảnh", count: 4 },
+  auto: { label: "Tự động (Theo khung)", count: 0 },
 };
 
 const MAIN_PTB_FRAMES = {
@@ -235,9 +236,9 @@ const detectedSlotCache = new Map();
 
 // Số lần chụp: ưu tiên số vùng ảnh của khung tùy chỉnh, nếu không thì theo bố cục.
 function layoutCount() {
-  return getSelectedCustomFrame()
-    ? state.frameSlots?.length || LAYOUTS[state.layout].count
-    : LAYOUTS[state.layout].count;
+  if (state.frameSlots?.length) return state.frameSlots.length;
+  if (state.layout === "auto") return 1; // Mặc định 1 nếu chưa chọn frame ở chế độ tự động
+  return LAYOUTS[state.layout]?.count || 1;
 }
 
 function defaultSlotsForLayout(layout) {
@@ -265,6 +266,10 @@ async function refreshFrameSlots() {
   const frame = getSelectedCustomFrame();
   state.frameSlots = await resolveFrameSlots(frame);
   syncControls();
+  
+  if (frame && state.frameSlots?.length) {
+    showToast(`Khung đã chọn: Chụp ${state.frameSlots.length} ảnh.`);
+  }
 }
 
 function openFrameDatabase() {
@@ -415,7 +420,7 @@ function renderCustomFrameGallery() {
   elements.customFrameGallery.replaceChildren();
 
   state.customFrames
-    .filter((frame) => frame.layout === "all" || frame.layout === state.layout)
+    .filter((frame) => state.layout === "auto" || frame.layout === "all" || frame.layout === state.layout)
     .forEach((frame) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -429,7 +434,9 @@ function renderCustomFrameGallery() {
     const name = document.createElement("strong");
     name.textContent = frame.name;
     const meta = document.createElement("small");
-    meta.textContent = `Khung riêng · ${layoutName(frame.layout)}`;
+    const slotCount = frame.slots?.length || 0;
+    const slotInfo = slotCount ? ` · ${slotCount} ô ảnh` : "";
+    meta.textContent = `Khung riêng · ${layoutName(frame.layout)}${slotInfo}`;
     info.append(name, meta);
 
     const check = document.createElement("span");
@@ -563,6 +570,17 @@ function selectCustomFrame(id) {
 }
 
 function syncControls() {
+  const count = layoutCount();
+  if (elements.captureHint) {
+    elements.captureHint.textContent = `${count} ảnh · đếm ngược ${state.timer} giây`;
+  }
+  if (elements.selectedLayoutLabel) {
+    elements.selectedLayoutLabel.textContent = LAYOUTS[state.layout]?.label || "Tùy chỉnh";
+  }
+  if (elements.frameLayoutContext) {
+    elements.frameLayoutContext.textContent = LAYOUTS[state.layout]?.label || "kiểu tự do";
+  }
+
   document.querySelectorAll("[data-layout]").forEach((button) => {
     const selected = button.dataset.layout === state.layout;
     button.classList.toggle("is-selected", selected);
@@ -1251,7 +1269,9 @@ function frameSlotsAreOpaque(frameImage, slots) {
 }
 
 async function composeMainPtbFrame(canvas, context) {
-  const template = MAIN_PTB_FRAMES[state.layout] || MAIN_PTB_FRAMES.single;
+  let layout = state.layout;
+  if (layout === "auto") layout = "single"; // Mặc định về single nếu dùng khung PTB ở chế độ auto
+  const template = MAIN_PTB_FRAMES[layout] || MAIN_PTB_FRAMES.single;
   const frameImage = await loadCanvasImage(template.source);
   canvas.width = template.width;
   canvas.height = template.height;
@@ -1317,7 +1337,9 @@ async function composeResult() {
     return;
   }
 
-  if (state.layout === "single") {
+  const effectiveLayout = state.layout === "auto" ? "single" : state.layout;
+
+  if (effectiveLayout === "single") {
     // Mẫu "trang 2" của Bộ khung PTB — thẻ ngang 3:2 với một khung ảnh lớn
     canvas.width = 1500;
     canvas.height = 1000;

@@ -426,6 +426,28 @@ svg {
   grid-template-rows: repeat(2, 1fr);
 }
 
+.large-auto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fff2e7, #f5ccb8);
+}
+
+.large-auto i {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: 
+    radial-gradient(circle at 50% 50%, #bd6a58 0 20%, transparent 22%),
+    repeating-conic-gradient(from 0deg, #bd6a58 0deg 30deg, transparent 30deg 60deg);
+  animation: rotate 10s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .layout-choice-info {
   display: block;
   width: 100%;
