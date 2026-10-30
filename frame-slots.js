@@ -31,16 +31,21 @@
       .flatMap((row) => row.slots.sort((a, b) => a.x - b.x));
   }
 
-  function detectFromImageData(imageData, width, height) {
-    const { data } = imageData;
+  function findSlots(data, width, height, isCandidate) {
     const total = width * height;
-    const transparent = new Uint8Array(total);
+    const candidates = new Uint8Array(total);
+    let countCandidates = 0;
 
     for (let index = 0; index < total; index += 1) {
-      if (data[index * 4 + 3] < ALPHA_THRESHOLD) transparent[index] = 1;
+      if (isCandidate(index)) {
+        candidates[index] = 1;
+        countCandidates += 1;
+      }
     }
 
-    // Loại vùng trong suốt dính mép ảnh (thường là nền ngoài của thẻ frame).
+    if (countCandidates === 0) return [];
+
+    // Loại vùng dính mép ảnh (thường là nền ngoài của thẻ frame).
     const visited = new Uint8Array(total);
     const stack = [];
 
@@ -56,7 +61,7 @@
     pushBorderPixels();
     while (stack.length) {
       const index = stack.pop();
-      if (visited[index] || !transparent[index]) continue;
+      if (visited[index] || !candidates[index]) continue;
       visited[index] = 1;
       const x = index % width;
       const y = (index - x) / width;
@@ -66,14 +71,14 @@
       if (y < height - 1) stack.push(index + width);
     }
 
-    // Các vùng trong suốt còn lại chính là cửa sổ ảnh.
+    // Các vùng còn lại chính là cửa sổ ảnh.
     const minArea = total * MIN_AREA_RATIO;
     const minWidth = width * MIN_SIDE_RATIO;
     const minHeight = height * MIN_SIDE_RATIO;
     const slots = [];
 
     for (let start = 0; start < total; start += 1) {
-      if (visited[start] || !transparent[start]) continue;
+      if (visited[start] || !candidates[start]) continue;
       let count = 0;
       let minX = width;
       let maxX = -1;
@@ -83,7 +88,7 @@
 
       while (stack.length) {
         const index = stack.pop();
-        if (visited[index] || !transparent[index]) continue;
+        if (visited[index] || !candidates[index]) continue;
         visited[index] = 1;
         count += 1;
         const x = index % width;
@@ -111,6 +116,35 @@
         h: boxHeight / height,
       });
     }
+
+    return slots;
+  }
+
+  function detectFromImageData(imageData, width, height) {
+    const { data } = imageData;
+
+    // 1. Thử dò theo vùng trong suốt (Alpha < Threshold) - Ưu tiên hàng đầu
+    let slots = findSlots(data, width, height, (i) => data[i * 4 + 3] < ALPHA_THRESHOLD);
+    if (slots.length) return sortSlots(slots);
+
+    // 2. Thử dò theo vùng màu trắng đặc (R,G,B > 245) - Dành cho file đục
+    slots = findSlots(data, width, height, (i) => {
+      const r = data[i * 4];
+      const g = data[i * 4 + 1];
+      const b = data[i * 4 + 2];
+      const a = data[i * 4 + 3];
+      return a > 200 && r > 245 && g > 245 && b > 245;
+    });
+    if (slots.length) return sortSlots(slots);
+
+    // 3. Thử dò theo vùng màu đen đặc (R,G,B < 15)
+    slots = findSlots(data, width, height, (i) => {
+      const r = data[i * 4];
+      const g = data[i * 4 + 1];
+      const b = data[i * 4 + 2];
+      const a = data[i * 4 + 3];
+      return a > 200 && r < 15 && g < 15 && b < 15;
+    });
 
     return sortSlots(slots);
   }
