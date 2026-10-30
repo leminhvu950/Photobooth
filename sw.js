@@ -1,10 +1,13 @@
-const CACHE_NAME = "snapjoy-v14";
+const CACHE_NAME = "snapjoy-v15";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./frame-slots.js",
   "./app.js",
+  "./frames/ptb-page-2.png",
+  "./frames/ptb-page-5.png",
+  "./frames/ptb-page-13.png",
   "./icon.svg",
   "./manifest.webmanifest",
   "./admin/",

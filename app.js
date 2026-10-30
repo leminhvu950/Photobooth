@@ -15,6 +15,40 @@ const LAYOUTS = {
   grid: { label: "Lưới 4 ảnh", count: 4 },
 };
 
+const MAIN_PTB_FRAMES = {
+  single: {
+    source: "./frames/ptb-page-2.png",
+    width: 1500,
+    height: 1000,
+    footerTop: 783,
+    slots: [{ x: 50 / 1500, y: 44 / 1000, w: 1400 / 1500, h: 739 / 1000 }],
+  },
+  strip: {
+    source: "./frames/ptb-page-5.png",
+    width: 800,
+    height: 2400,
+    footerTop: 1883,
+    slots: [0, 1, 2].map((index) => ({
+      x: 41 / 800,
+      y: (187 + index * 583) / 2400,
+      w: 718 / 800,
+      h: 530 / 2400,
+    })),
+  },
+  grid: {
+    source: "./frames/ptb-page-13.png",
+    width: 1100,
+    height: 1650,
+    footerTop: 1362,
+    slots: [0, 1, 2, 3].map((index) => ({
+      x: (37 + (index % 2) * 531) / 1100,
+      y: (61 + Math.floor(index / 2) * 664) / 1650,
+      w: 495 / 1100,
+      h: 637 / 1650,
+    })),
+  },
+};
+
 const FILTERS = {
   normal: "none",
   warm: "sepia(0.18) saturate(1.22) contrast(1.03)",
@@ -25,7 +59,7 @@ const FILTERS = {
 const FRAME_STYLES = ["minimal", "film", "love", "party"];
 
 const FRAME_NAMES = {
-  minimal: "Tối giản",
+  minimal: "Khung PTB",
   film: "Cuộn film",
   love: "Tình yêu",
   party: "Lễ hội",
@@ -188,7 +222,13 @@ const detectedSlotCache = new Map();
 
 // Số lần chụp: ưu tiên số vùng ảnh của khung tùy chỉnh, nếu không thì theo bố cục.
 function layoutCount() {
-  return state.frameSlots?.length || LAYOUTS[state.layout].count;
+  return getSelectedCustomFrame()
+    ? state.frameSlots?.length || LAYOUTS[state.layout].count
+    : LAYOUTS[state.layout].count;
+}
+
+function defaultSlotsForLayout(layout) {
+  return MAIN_PTB_FRAMES[layout]?.slots || MAIN_PTB_FRAMES.single.slots;
 }
 
 // Khung do người dùng lưu sẽ mang sẵn danh sách vùng ảnh; khung cũ chưa có thì dò lại từ file.
@@ -1160,6 +1200,67 @@ function loadCanvasImage(source) {
   });
 }
 
+// Một số công cụ xuất PDF/PNG làm các ô ảnh thành màu trắng hoặc đen đục.
+// Khi đó frame phải nằm dưới ảnh; frame PNG/WebP có lỗ trong suốt vẫn nằm trên ảnh
+// để giữ lại viền và các chi tiết trang trí.
+function frameSlotsAreOpaque(frameImage, slots) {
+  const naturalWidth = frameImage.naturalWidth || frameImage.width;
+  const naturalHeight = frameImage.naturalHeight || frameImage.height;
+  if (!naturalWidth || !naturalHeight || !slots?.length) return false;
+
+  const scale = Math.min(1, 360 / Math.max(naturalWidth, naturalHeight));
+  const width = Math.max(1, Math.round(naturalWidth * scale));
+  const height = Math.max(1, Math.round(naturalHeight * scale));
+  const sampleCanvas = document.createElement("canvas");
+  sampleCanvas.width = width;
+  sampleCanvas.height = height;
+  const sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
+  sampleContext.drawImage(frameImage, 0, 0, width, height);
+
+  try {
+    const pixels = sampleContext.getImageData(0, 0, width, height).data;
+    let opaqueSamples = 0;
+    let totalSamples = 0;
+    slots.forEach((slot) => {
+      for (let row = 1; row <= 5; row += 1) {
+        for (let column = 1; column <= 5; column += 1) {
+          const x = Math.min(width - 1, Math.max(0, Math.round((slot.x + slot.w * column / 6) * width)));
+          const y = Math.min(height - 1, Math.max(0, Math.round((slot.y + slot.h * row / 6) * height)));
+          if (pixels[(y * width + x) * 4 + 3] > 180) opaqueSamples += 1;
+          totalSamples += 1;
+        }
+      }
+    });
+    return totalSamples > 0 && opaqueSamples / totalSamples > 0.55;
+  } catch {
+    return false;
+  }
+}
+
+async function composeMainPtbFrame(canvas, context) {
+  const template = MAIN_PTB_FRAMES[state.layout] || MAIN_PTB_FRAMES.single;
+  const frameImage = await loadCanvasImage(template.source);
+  canvas.width = template.width;
+  canvas.height = template.height;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  template.slots.forEach((slot, index) => {
+    const photo = state.photos[index];
+    if (!photo) return;
+    drawPhoto(
+      context,
+      photo,
+      slot.x * canvas.width,
+      slot.y * canvas.height,
+      slot.w * canvas.width,
+      slot.h * canvas.height,
+      0,
+    );
+  });
+  context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+  drawFooter(context, canvas, template.footerTop, "#221f1f");
+}
+
 async function composeResult() {
   if (document.fonts?.ready) await document.fonts.ready;
 
@@ -1169,7 +1270,7 @@ async function composeResult() {
   let footerTop;
 
   const customFrame = getSelectedCustomFrame();
-  const slots = customFrame ? state.frameSlots : null;
+  const slots = customFrame ? (state.frameSlots?.length ? state.frameSlots : defaultSlotsForLayout(state.layout)) : null;
 
   if (customFrame && slots?.length) {
     // Khung tùy chỉnh: canvas lấy đúng kích thước file, ảnh chụp lọt vào từng vùng đã dò.
@@ -1181,6 +1282,9 @@ async function composeResult() {
     canvas.height = Math.max(1, Math.round(naturalHeight * scale));
     context.clearRect(0, 0, canvas.width, canvas.height);
 
+    const opaqueSlots = frameSlotsAreOpaque(frameImage, slots);
+    if (opaqueSlots) context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+
     slots.forEach((slot, index) => {
       const photo = state.photos[index];
       if (!photo) return;
@@ -1188,10 +1292,15 @@ async function composeResult() {
       const y = slot.y * canvas.height;
       const width = slot.w * canvas.width;
       const height = slot.h * canvas.height;
-      drawPhoto(context, photo, x, y, width, height, Math.min(width, height) * 0.06);
+      drawPhoto(context, photo, x, y, width, height, 0);
     });
 
-    context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    if (!opaqueSlots) context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  if (!customFrame && state.frameStyle === "minimal") {
+    await composeMainPtbFrame(canvas, context);
     return;
   }
 
@@ -1300,6 +1409,7 @@ function showFrameSelection(direction = "forward") {
 async function continueToCapture() {
   const customFrame = getSelectedCustomFrame();
   if (customFrame?.layout && customFrame.layout !== "all") state.layout = customFrame.layout;
+  await refreshFrameSlots();
   elements.resultView.classList.remove("is-visible");
   activateFlowSlide(elements.captureStep, "forward");
   syncControls();

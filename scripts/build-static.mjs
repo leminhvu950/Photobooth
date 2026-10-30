@@ -21,6 +21,7 @@ await Promise.all(
   publicFiles.map((file) => cp(path.join(projectRoot, file), path.join(outputDirectory, file))),
 );
 await cp(path.join(projectRoot, "admin"), path.join(outputDirectory, "admin"), { recursive: true });
+await cp(path.join(projectRoot, "frames"), path.join(outputDirectory, "frames"), { recursive: true });
 await writeFile(path.join(outputDirectory, ".nojekyll"), "");
 
 console.log(`Built SnapJoy for GitHub Pages in ${outputDirectory}`);
