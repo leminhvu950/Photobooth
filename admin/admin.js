@@ -96,6 +96,7 @@ const elements = {
   newPasswordInput: document.querySelector("#newPasswordInput"),
   confirmNewPasswordInput: document.querySelector("#confirmNewPasswordInput"),
   passwordMessage: document.querySelector("#passwordMessage"),
+  resetAllButton: document.querySelector("#resetAllButton"),
   toast: document.querySelector("#toast"),
 };
 
@@ -1012,6 +1013,36 @@ function saveAppSettings(event) {
   showToast("Đã lưu cài đặt phần mềm.");
 }
 
+async function resetAllData() {
+  const confirmed = window.confirm(
+    "Reset toàn bộ dữ liệu?\n\n"
+    + "• Xóa mọi frame tùy chỉnh và lượt chụp trên thiết bị này\n"
+    + "• Xóa cài đặt và mật khẩu admin\n"
+    + "• Xóa thư viện frame dùng chung trên máy chủ chia sẻ\n\n"
+    + "SnapJoy sẽ trở về trạng thái như mới cài. Không thể hoàn tác.",
+  );
+  if (!confirmed) return;
+
+  elements.resetAllButton.disabled = true;
+  elements.resetAllButton.textContent = "Đang xóa…";
+
+  await Promise.all([
+    clearStore(DATABASE.frames),
+    clearStore(DATABASE.sessions),
+  ]).catch((error) => console.error(error));
+
+  try {
+    const remote = await pullFramesFromServer();
+    for (const frame of remote) await deleteFrameOnServer(frame.id);
+  } catch {
+    // Máy chủ chưa kết nối: chỉ cần xóa dữ liệu trên thiết bị này.
+  }
+
+  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  sessionStorage.removeItem(STORAGE_KEYS.authenticated);
+  window.location.reload();
+}
+
 function setPasswordMessage(message, type = "error") {
   elements.passwordMessage.textContent = message;
   elements.passwordMessage.className = `form-message${message ? ` is-${type}` : ""}`;
@@ -1162,6 +1193,7 @@ function bindEvents() {
   elements.emptyUploadButton.addEventListener("click", focusUpload);
   elements.appSettingsForm.addEventListener("submit", saveAppSettings);
   elements.changePasswordForm.addEventListener("submit", changePassword);
+  elements.resetAllButton.addEventListener("click", resetAllData);
 
   ["dragenter", "dragover"].forEach((eventName) => {
     elements.uploadDropzone.addEventListener(eventName, (event) => {
