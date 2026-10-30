@@ -62,6 +62,14 @@ const elements = {
   fileFeedback: document.querySelector("#fileFeedback"),
   saveFrameButton: document.querySelector("#saveFrameButton"),
   resetFormButton: document.querySelector("#resetFormButton"),
+  slotEditor: document.querySelector("#slotEditor"),
+  slotStage: document.querySelector("#slotStage"),
+  slotStageImage: document.querySelector("#slotStageImage"),
+  slotLayer: document.querySelector("#slotLayer"),
+  slotCount: document.querySelector("#slotCount"),
+  slotRedetectButton: document.querySelector("#slotRedetectButton"),
+  slotAddButton: document.querySelector("#slotAddButton"),
+  slotRemoveButton: document.querySelector("#slotRemoveButton"),
   adminFrameList: document.querySelector("#adminFrameList"),
   libraryCount: document.querySelector("#libraryCount"),
   focusUploadButton: document.querySelector("#focusUploadButton"),
@@ -82,6 +90,9 @@ const state = {
   frames: [],
   sessions: [],
   pendingFrame: null,
+  slots: [],
+  selectedSlot: -1,
+  slotDrag: null,
   settings: { ...DEFAULT_SETTINGS },
   setupMode: false,
   toastTimer: null,
@@ -479,7 +490,9 @@ function renderFrames() {
     const name = document.createElement("strong");
     name.textContent = frame.name;
     const meta = document.createElement("small");
-    meta.textContent = `${layoutName(frame.layout)} · ${frame.width}×${frame.height}px`;
+    meta.textContent = frame.slots?.length
+      ? `${frame.slots.length} vùng ảnh · ${frame.width}×${frame.height}px`
+      : `${layoutName(frame.layout)} · ${frame.width}×${frame.height}px`;
     const actions = document.createElement("div");
     actions.className = "frame-item-actions";
     const useButton = document.createElement("button");
@@ -535,10 +548,138 @@ function setFileFeedback(message, type = "") {
 
 function clearFilePreview() {
   state.pendingFrame = null;
+  state.slots = [];
+  state.selectedSlot = -1;
+  state.slotDrag = null;
+  elements.slotEditor.hidden = true;
+  elements.slotStageImage.removeAttribute("src");
+  elements.slotLayer.replaceChildren();
+  elements.slotCount.textContent = "0";
   elements.adminPreviewImage.removeAttribute("src");
   elements.adminFramePreview.classList.remove("has-image");
   elements.previewDimensions.textContent = "";
   setFileFeedback("");
+}
+
+function slotsMessage() {
+  if (!state.slots.length) return "";
+  return `Đã dò thấy ${state.slots.length} vùng ảnh · photobooth sẽ chụp ${state.slots.length} tấm.`;
+}
+
+function renderSlots() {
+  elements.slotCount.textContent = String(state.slots.length);
+  elements.slotLayer.replaceChildren(
+    ...state.slots.map((slot, index) => {
+      const box = document.createElement("div");
+      box.className = "slot-box";
+      box.dataset.slotIndex = String(index);
+      box.classList.toggle("is-selected", index === state.selectedSlot);
+      box.style.left = `${slot.x * 100}%`;
+      box.style.top = `${slot.y * 100}%`;
+      box.style.width = `${slot.w * 100}%`;
+      box.style.height = `${slot.h * 100}%`;
+      const label = document.createElement("b");
+      label.textContent = String(index + 1);
+      const handle = document.createElement("span");
+      handle.className = "slot-handle";
+      handle.dataset.slotHandle = "resize";
+      box.append(label, handle);
+      return box;
+    }),
+  );
+  elements.slotRemoveButton.disabled = state.selectedSlot < 0;
+}
+
+async function initSlotEditor(dataUrl) {
+  elements.slotEditor.hidden = false;
+  elements.slotStageImage.src = dataUrl;
+  try {
+    state.slots = await window.SnapJoySlots.detectFromSource(dataUrl);
+  } catch (error) {
+    console.error(error);
+    state.slots = [];
+  }
+  state.selectedSlot = state.slots.length ? 0 : -1;
+  renderSlots();
+}
+
+function normalizeSlots() {
+  state.slots = window.SnapJoySlots.round(window.SnapJoySlots.sortSlots(state.slots));
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function slotPointFromEvent(event) {
+  const rect = elements.slotStage.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  return {
+    x: clamp((event.clientX - rect.left) / rect.width, 0, 1),
+    y: clamp((event.clientY - rect.top) / rect.height, 0, 1),
+  };
+}
+
+function startSlotDrag(event) {
+  if (event.button !== 0 || !state.pendingFrame) return;
+  const point = slotPointFromEvent(event);
+  if (!point) return;
+  const box = event.target.closest("[data-slot-index]");
+  const isHandle = Boolean(event.target.closest("[data-slot-handle]"));
+
+  if (box && isHandle) {
+    const index = Number(box.dataset.slotIndex);
+    state.slotDrag = { mode: "resize", index, start: point, origin: { ...state.slots[index] } };
+  } else if (box) {
+    const index = Number(box.dataset.slotIndex);
+    state.selectedSlot = index;
+    renderSlots();
+    state.slotDrag = { mode: "move", index, start: point, origin: { ...state.slots[index] } };
+  } else {
+    const slot = { x: point.x, y: point.y, w: 0, h: 0 };
+    state.slots.push(slot);
+    state.selectedSlot = state.slots.length - 1;
+    renderSlots();
+    state.slotDrag = { mode: "create", index: state.selectedSlot, start: point, origin: { ...slot } };
+  }
+  event.preventDefault();
+}
+
+function moveSlotDrag(event) {
+  if (!state.slotDrag) return;
+  const point = slotPointFromEvent(event);
+  if (!point) return;
+  const { mode, start, origin } = state.slotDrag;
+  const slot = state.slots[state.slotDrag.index];
+  if (!slot) return;
+
+  if (mode === "move") {
+    slot.x = clamp(origin.x + point.x - start.x, 0, 1 - origin.w);
+    slot.y = clamp(origin.y + point.y - start.y, 0, 1 - origin.h);
+  } else if (mode === "resize") {
+    slot.w = clamp(origin.w + point.x - start.x, 0.04, 1 - origin.x);
+    slot.h = clamp(origin.h + point.y - start.y, 0.04, 1 - origin.y);
+  } else {
+    slot.x = Math.min(start.x, point.x);
+    slot.y = Math.min(start.y, point.y);
+    slot.w = Math.abs(point.x - start.x);
+    slot.h = Math.abs(point.y - start.y);
+  }
+  renderSlots();
+}
+
+function endSlotDrag() {
+  if (!state.slotDrag) return;
+  const mode = state.slotDrag.mode;
+  state.slotDrag = null;
+  if (mode === "create") {
+    state.slots = state.slots.filter((slot) => slot.w >= 0.03 && slot.h >= 0.03);
+  }
+  normalizeSlots();
+  if (state.selectedSlot >= state.slots.length) state.selectedSlot = state.slots.length - 1;
+  renderSlots();
+  const message = slotsMessage();
+  setFileFeedback(message || "Chưa có vùng ảnh nào — hãy thêm vùng thủ công.", message ? "" : "warning");
 }
 
 async function prepareFrameFile(file) {
@@ -564,8 +705,17 @@ async function prepareFrameFile(file) {
     elements.adminPreviewImage.src = dataUrl;
     elements.adminFramePreview.classList.add("has-image");
     elements.previewDimensions.textContent = `${dimensions.width} × ${dimensions.height}px`;
-    const warning = ratioWarning(dimensions.width, dimensions.height, elements.customFrameLayout.value);
-    setFileFeedback(warning || `${file.name} · ${formatBytes(file.size)}`, warning ? "warning" : "");
+    await initSlotEditor(dataUrl);
+    const found = slotsMessage();
+    if (found) {
+      setFileFeedback(`${found} · ${file.name} · ${formatBytes(file.size)}`);
+    } else {
+      const warning = ratioWarning(dimensions.width, dimensions.height, elements.customFrameLayout.value);
+      setFileFeedback(
+        warning || "Không thấy vùng trong suốt nào — hãy dùng “Thêm vùng” để khoanh ô ảnh.",
+        "warning",
+      );
+    }
   } catch (error) {
     setFileFeedback(error.message, "error");
   }
@@ -591,6 +741,7 @@ async function saveFrame(event) {
     dataUrl: state.pendingFrame.dataUrl,
     width: state.pendingFrame.width,
     height: state.pendingFrame.height,
+    slots: window.SnapJoySlots.round(state.slots),
     createdAt: Date.now(),
   };
   elements.saveFrameButton.disabled = true;
@@ -759,9 +910,41 @@ function bindEvents() {
     elements.adminFramePreview.parentElement.classList.add(`preview-${elements.customFrameLayout.value}`);
 
     if (!state.pendingFrame) return;
+    const found = slotsMessage();
+    if (found) {
+      setFileFeedback(found);
+      return;
+    }
     const warning = ratioWarning(state.pendingFrame.width, state.pendingFrame.height, elements.customFrameLayout.value);
     setFileFeedback(warning || `Kích thước ${state.pendingFrame.width}×${state.pendingFrame.height}px phù hợp.`, warning ? "warning" : "");
   });
+  elements.slotRedetectButton.addEventListener("click", () => {
+    if (!state.pendingFrame) return;
+    initSlotEditor(state.pendingFrame.dataUrl).then(() => {
+      const message = slotsMessage();
+      setFileFeedback(message || "Không thấy vùng trong suốt nào.", message ? "" : "warning");
+    });
+  });
+  elements.slotAddButton.addEventListener("click", () => {
+    if (!state.pendingFrame) return;
+    const slot = { x: 0.3, y: 0.3, w: 0.4, h: 0.3 };
+    state.slots.push(slot);
+    normalizeSlots();
+    state.selectedSlot = state.slots.indexOf(slot);
+    renderSlots();
+    setFileFeedback(slotsMessage());
+  });
+  elements.slotRemoveButton.addEventListener("click", () => {
+    if (state.selectedSlot < 0) return;
+    state.slots.splice(state.selectedSlot, 1);
+    state.selectedSlot = Math.min(state.selectedSlot, state.slots.length - 1);
+    renderSlots();
+    setFileFeedback(slotsMessage() || "Chưa có vùng ảnh nào — hãy thêm vùng thủ công.");
+  });
+  elements.slotLayer.addEventListener("pointerdown", startSlotDrag);
+  window.addEventListener("pointermove", moveSlotDrag);
+  window.addEventListener("pointerup", endSlotDrag);
+  window.addEventListener("pointercancel", endSlotDrag);
   elements.focusUploadButton.addEventListener("click", focusUpload);
   elements.emptyUploadButton.addEventListener("click", focusUpload);
   elements.appSettingsForm.addEventListener("submit", saveAppSettings);

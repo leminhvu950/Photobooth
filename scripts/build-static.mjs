@@ -7,6 +7,7 @@ const outputDirectory = path.join(projectRoot, "dist");
 const publicFiles = [
   "index.html",
   "styles.css",
+  "frame-slots.js",
   "app.js",
   "icon.svg",
   "manifest.webmanifest",

@@ -245,6 +245,22 @@ svg {
 .reset-button:hover { background: #f7f2ee; }
 .save-button:disabled { cursor: wait; opacity: .6; }
 
+.slot-editor { margin-top: 12px; padding: 11px; border: 1px solid var(--line); border-radius: 13px; background: #fdfaf7; }
+.slot-editor-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; font-size: .58rem; font-weight: 700; }
+.slot-editor-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.slot-editor-actions button { padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: white; font-size: .53rem; font-weight: 700; }
+.slot-editor-actions button:hover { color: var(--ink); background: var(--cream); }
+.slot-stage { position: relative; display: inline-block; max-width: 100%; line-height: 0; touch-action: none; cursor: crosshair; }
+.slot-stage img { display: block; max-width: 100%; max-height: 320px; border-radius: 8px; }
+.slot-layer { position: absolute; inset: 0; }
+.slot-box { position: absolute; border: 2px solid var(--orange); border-radius: 4px; background: rgba(242,107,56,.16); cursor: move; }
+.slot-box.is-selected { border-color: #1f8f6f; background: rgba(31,143,111,.2); }
+.slot-box b { position: absolute; top: -9px; left: -9px; display: grid; width: 17px; height: 17px; place-items: center; border-radius: 50%; color: white; background: var(--orange); font-size: .5rem; font-weight: 800; line-height: 1; }
+.slot-box.is-selected b { background: #1f8f6f; }
+.slot-handle { position: absolute; right: -6px; bottom: -6px; width: 13px; height: 13px; border: 2px solid white; border-radius: 3px; background: var(--orange); cursor: nwse-resize; }
+.slot-box.is-selected .slot-handle { background: #1f8f6f; }
+.slot-hint { margin: 9px 0 0; color: var(--muted); font-size: .53rem; line-height: 1.55; }
+
 .library-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
 .frame-item { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: white; transition: .2s ease; }
 .frame-item:hover { border-color: #d7baa9; box-shadow: 0 10px 25px rgba(73,48,34,.1); transform: translateY(-2px); }

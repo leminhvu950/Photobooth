@@ -119,6 +119,7 @@ const state = {
   frameStyle: "minimal",
   customFrameId: null,
   customFrames: [],
+  frameSlots: null,
   frameColor: "#221F1F",
   mirrored: true,
   busy: false,
@@ -181,6 +182,36 @@ function layoutName(layout) {
 
 function getSelectedCustomFrame() {
   return state.customFrames.find((frame) => frame.id === state.customFrameId) || null;
+}
+
+const detectedSlotCache = new Map();
+
+// Số lần chụp: ưu tiên số vùng ảnh của khung tùy chỉnh, nếu không thì theo bố cục.
+function layoutCount() {
+  return state.frameSlots?.length || LAYOUTS[state.layout].count;
+}
+
+// Khung do người dùng lưu sẽ mang sẵn danh sách vùng ảnh; khung cũ chưa có thì dò lại từ file.
+async function resolveFrameSlots(frame) {
+  if (!frame) return null;
+  if (frame.slots?.length) return frame.slots;
+  if (detectedSlotCache.has(frame.id)) return detectedSlotCache.get(frame.id);
+  let slots = null;
+  try {
+    const detected = (await window.SnapJoySlots?.detectFromSource(frame.dataUrl)) || [];
+    slots = detected.length ? detected : null;
+  } catch (error) {
+    console.error(error);
+    slots = null;
+  }
+  detectedSlotCache.set(frame.id, slots);
+  return slots;
+}
+
+async function refreshFrameSlots() {
+  const frame = getSelectedCustomFrame();
+  state.frameSlots = await resolveFrameSlots(frame);
+  syncControls();
 }
 
 function openFrameDatabase() {
@@ -273,7 +304,7 @@ async function recordCompletedSession() {
     id: window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     createdAt: Date.now(),
     layout: state.layout,
-    photoCount: LAYOUTS[state.layout].count,
+    photoCount: layoutCount(),
     frameId: customFrame?.id || null,
     frameName: customFrame?.name || FRAME_NAMES[state.frameStyle] || FRAME_NAMES.minimal,
     amount,
@@ -345,6 +376,7 @@ async function loadCustomFrames() {
     showToast("Không thể mở thư viện khung trên thiết bị này.");
   }
   renderFrameLibraries();
+  refreshFrameSlots();
 }
 
 function selectBuiltInFrame(style) {
@@ -353,6 +385,7 @@ function selectBuiltInFrame(style) {
   state.customFrameId = null;
   savePreferences();
   syncControls();
+  refreshFrameSlots();
 }
 
 function selectCustomFrame(id) {
@@ -362,6 +395,7 @@ function selectCustomFrame(id) {
   if (frame.layout !== "all") state.layout = frame.layout;
   savePreferences();
   syncControls();
+  refreshFrameSlots();
 }
 
 function syncControls() {
@@ -411,30 +445,37 @@ function syncControls() {
   elements.frameColor.value = state.frameColor;
   elements.frameColor.setAttribute("aria-checked", String(!hasPresetFrame));
 
+  const customFrame = getSelectedCustomFrame();
+  const frameName = customFrame?.name || FRAME_NAMES[state.frameStyle] || FRAME_NAMES.minimal;
+  const slots = customFrame ? state.frameSlots : null;
+  const count = layoutCount();
+
   elements.layoutLabel.textContent = LAYOUTS[state.layout].label;
   elements.selectedLayoutLabel.textContent = LAYOUTS[state.layout].label;
   elements.frameLayoutContext.textContent = LAYOUTS[state.layout].label;
-  elements.captureLayoutName.textContent = LAYOUTS[state.layout].label;
-  elements.captureLayoutMeta.textContent = {
-    single: "1 lần chụp · tỷ lệ 3:2",
-    strip: "3 lần chụp · tỷ lệ 1:3",
-    grid: "4 lần chụp · tỷ lệ 2:3",
-  }[state.layout];
-  elements.captureLayoutPreview.className = `layout-preview layout-${state.layout}`;
+  elements.captureLayoutName.textContent = slots ? frameName : LAYOUTS[state.layout].label;
+  elements.captureLayoutMeta.textContent = slots
+    ? `${slots.length} vùng ảnh · khung tùy chỉnh`
+    : {
+        single: "1 lần chụp · tỷ lệ 3:2",
+        strip: "3 lần chụp · tỷ lệ 1:3",
+        grid: "4 lần chụp · tỷ lệ 2:3",
+      }[state.layout];
+  elements.captureLayoutPreview.className = `layout-preview layout-${slots ? "grid" : state.layout}`;
   elements.captureLayoutPreview.replaceChildren(
-    ...Array.from({ length: LAYOUTS[state.layout].count }, () => document.createElement("i")),
+    ...Array.from({ length: count }, () => document.createElement("i")),
   );
-  elements.captureHint.textContent = `${LAYOUTS[state.layout].count} ảnh · đếm ngược ${state.timer} giây`;
+  elements.captureHint.textContent = `${count} ảnh · đếm ngược ${state.timer} giây`;
   elements.video.style.filter = FILTERS[state.filter];
   elements.video.classList.toggle("is-unmirrored", !state.mirrored);
   elements.mirrorButton.setAttribute("aria-pressed", String(state.mirrored));
 
-  const customFrame = getSelectedCustomFrame();
-  const frameName = customFrame?.name || FRAME_NAMES[state.frameStyle] || FRAME_NAMES.minimal;
   elements.selectedFrameLabel.textContent = frameName;
   elements.captureFrameName.textContent = frameName;
   elements.captureFrameMeta.textContent = customFrame
-    ? `Khung tùy chỉnh · ${layoutName(customFrame.layout)}`
+    ? slots
+      ? `Khung tùy chỉnh · ${slots.length} vùng ảnh`
+      : `Khung tùy chỉnh · ${layoutName(customFrame.layout)}`
     : "Khung có sẵn · Mọi bố cục";
 
   elements.selectedFrameMini.className = "selected-frame-mini";
@@ -776,7 +817,7 @@ async function startCapture() {
   state.cancelled = false;
   state.sessionRecorded = false;
   state.photos = [];
-  const total = LAYOUTS[state.layout].count;
+  const total = layoutCount();
   createProgress(total);
   elements.poseStatus.classList.add("is-visible");
   setCaptureControlsDisabled(true);
@@ -1016,6 +1057,33 @@ async function composeResult() {
   const frame = state.frameColor;
   let footerTop;
 
+  const customFrame = getSelectedCustomFrame();
+  const slots = customFrame ? state.frameSlots : null;
+
+  if (customFrame && slots?.length) {
+    // Khung tùy chỉnh: canvas lấy đúng kích thước file, ảnh chụp lọt vào từng vùng đã dò.
+    const frameImage = await loadCanvasImage(customFrame.dataUrl);
+    const naturalWidth = frameImage.naturalWidth || customFrame.width;
+    const naturalHeight = frameImage.naturalHeight || customFrame.height;
+    const scale = Math.min(1, 2400 / Math.max(naturalWidth, naturalHeight));
+    canvas.width = Math.max(1, Math.round(naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(naturalHeight * scale));
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    slots.forEach((slot, index) => {
+      const photo = state.photos[index];
+      if (!photo) return;
+      const x = slot.x * canvas.width;
+      const y = slot.y * canvas.height;
+      const width = slot.w * canvas.width;
+      const height = slot.h * canvas.height;
+      drawPhoto(context, photo, x, y, width, height, Math.min(width, height) * 0.06);
+    });
+
+    context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    return;
+  }
+
   if (state.layout === "single") {
     // Mẫu "trang 2" của Bộ khung PTB — thẻ ngang 3:2 với một khung ảnh lớn
     canvas.width = 1500;
@@ -1070,7 +1138,6 @@ async function composeResult() {
   }
 
   drawFooter(context, canvas, footerTop, frame);
-  const customFrame = getSelectedCustomFrame();
   if (customFrame) {
     const frameImage = await loadCanvasImage(customFrame.dataUrl);
     context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
@@ -1105,6 +1172,7 @@ function showFrameSelection(direction = "forward") {
   const customFrame = getSelectedCustomFrame();
   if (customFrame && customFrame.layout !== "all" && customFrame.layout !== state.layout) {
     state.customFrameId = null;
+    refreshFrameSlots();
   }
   elements.resultView.classList.remove("is-visible");
   
@@ -1420,6 +1488,7 @@ function bindEvents() {
     const customFrame = getSelectedCustomFrame();
     if (customFrame && customFrame.layout !== "all" && customFrame.layout !== state.layout) {
       state.customFrameId = null;
+      refreshFrameSlots();
     }
     renderCustomFrameGallery();
   });

@@ -156,9 +156,25 @@
                   <label class="field"><span>Bố cục phù hợp <b>*</b></span><select id="customFrameLayout" name="frameLayout"><option value="all">Mọi bố cục</option><option value="single">1 ảnh — 1500×1000</option><option value="strip">Dải 3 ảnh — 800×2400</option><option value="grid">Lưới 4 ảnh — 1100×1650</option></select></label>
                   <label class="dropzone" id="uploadDropzone" for="customFrameFile"><input id="customFrameFile" name="frameFile" type="file" accept="image/png,image/webp" /><span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5" /></svg></span><strong>Kéo thả hoặc chọn file frame</strong><small>PNG/WebP nền trong suốt · tối đa 8 MB</small></label>
                   <div class="preview-block"><div class="preview-label"><span>Xem trước</span><small id="previewDimensions"></small></div><div class="frame-preview" id="adminFramePreview"><div class="demo-photo" aria-hidden="true"><span></span></div><img id="adminPreviewImage" alt="Xem trước frame sắp tải lên" /><p id="adminPreviewPlaceholder">Chọn file để xem frame trên ảnh mẫu</p></div></div>
+                  <section class="slot-editor" id="slotEditor" hidden>
+                    <div class="slot-editor-head">
+                      <span>Vùng ảnh tự dò: <b id="slotCount">0</b></span>
+                      <div class="slot-editor-actions">
+                        <button type="button" id="slotRedetectButton">Dò lại</button>
+                        <button type="button" id="slotAddButton">Thêm vùng</button>
+                        <button type="button" id="slotRemoveButton">Xóa vùng chọn</button>
+                      </div>
+                    </div>
+                    <div class="slot-stage" id="slotStage">
+                      <img id="slotStageImage" alt="Frame với các vùng ảnh đã dò" />
+                      <div class="slot-layer" id="slotLayer"></div>
+                    </div>
+                    <p class="slot-hint">Kéo vùng để di chuyển, kéo ô vuông góc dưới-phải để đổi kích thước, kéo trên nền để tạo vùng mới. Số vùng quyết định số lần chụp.</p>
+                  </section>
                   <p class="file-feedback" id="fileFeedback" aria-live="polite"></p>
                   <div class="form-actions"><button class="reset-button" id="resetFormButton" type="button">Đặt lại</button><button class="primary-button save-button" id="saveFrameButton" type="submit">Lưu vào thư viện</button></div>
                 </form>
+                <p class="settings-hint">Mẹo: đặt các ô ảnh thành vùng <strong>trong suốt</strong> trong file thiết kế — SnapJoy sẽ tự dò và bạn chỉnh lại được ở khung “Vùng ảnh” phía trên.</p>
               </section>
               <section class="panel library-panel" aria-labelledby="libraryTitle">
                 <div class="panel-heading library-heading"><span class="heading-number">02</span><div><h2 id="libraryTitle">Frame đã tải lên</h2><p>Chọn để sử dụng hoặc xóa khỏi thiết bị.</p></div><span class="count-badge" id="libraryCount">0 frame</span></div>
@@ -205,6 +221,7 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="../frame-slots.js" defer></script>
     <script src="./admin.js" defer></script>
   </body>
 </html>
