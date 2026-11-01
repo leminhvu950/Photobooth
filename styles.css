@@ -1703,6 +1703,17 @@ svg {
   box-shadow: 0 0 0 2px var(--orange);
 }
 
+.frame-color.none {
+  background:
+    linear-gradient(45deg, #eee 25%, transparent 25%),
+    linear-gradient(-45deg, #eee 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eee 75%),
+    linear-gradient(-45deg, transparent 75%, #eee 75%),
+    white;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  background-size: 8px 8px;
+}
+
 .frame-color.cream { background: #fffaf3; }
 .frame-color.pink { background: #f9a8b8; }
 .frame-color.mint { background: #b8e0d2; }

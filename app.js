@@ -1272,7 +1272,7 @@ async function composeMainPtbFrame(canvas, context) {
   canvas.height = template.height;
   context.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (!frameImage) {
+  if (!frameImage && state.frameColor !== "transparent") {
     context.fillStyle = state.frameColor;
     context.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -1304,6 +1304,8 @@ async function composeResult() {
 
   const canvas = elements.resultCanvas;
   const context = canvas.getContext("2d");
+  context.clearRect(0, 0, canvas.width, canvas.height); // Xóa canvas trước khi vẽ để hỗ trợ nền trong suốt
+
   const frame = state.frameColor;
   let footerTop;
 
@@ -1365,8 +1367,10 @@ async function composeResult() {
     const marginX = 50;
     const marginTop = 44;
     const photoHeight = 739;
-    context.fillStyle = frame;
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    if (frame !== "transparent") {
+      context.fillStyle = frame;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
     drawPhoto(context, state.photos[0], marginX, marginTop, canvas.width - marginX * 2, photoHeight, 18);
     footerTop = marginTop + photoHeight;
   } else if (state.layout === "strip") {
@@ -1377,8 +1381,10 @@ async function composeResult() {
     const gap = 53;
     const photoHeight = 530;
     const startY = 187;
-    context.fillStyle = frame;
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    if (frame !== "transparent") {
+      context.fillStyle = frame;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
     state.photos.forEach((photo, index) => {
       drawPhoto(context, photo, marginX, startY + index * (photoHeight + gap), canvas.width - marginX * 2, photoHeight, 12);
     });
@@ -1391,8 +1397,10 @@ async function composeResult() {
     const gap = 53;
     const photoHeight = 530;
     const startY = 187;
-    context.fillStyle = frame;
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    if (frame !== "transparent") {
+      context.fillStyle = frame;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
     state.photos.forEach((photo, index) => {
       drawPhoto(context, photo, marginX, startY + index * (photoHeight + gap), canvas.width - marginX * 2, photoHeight, 12);
     });
@@ -1407,8 +1415,10 @@ async function composeResult() {
     const startY = 61;
     const photoHeight = 637;
     const photoWidth = (canvas.width - marginX * 2 - gapX) / 2;
-    context.fillStyle = frame;
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    if (frame !== "transparent") {
+      context.fillStyle = frame;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
     state.photos.forEach((photo, index) => {
       const column = index % 2;
       const row = Math.floor(index / 2);
