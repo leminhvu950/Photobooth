@@ -1323,9 +1323,37 @@ async function composeResult() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     const opaqueSlots = frameOpaqueSlots(frameImage, slots);
-    // Vẽ frame trước làm nền cho những ô đục, nhờ vậy ảnh của ô đó không bị che.
-    context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    
+    // Bước 1: Vẽ màu nền của app (nếu có)
+    if (state.frameColor !== "transparent") {
+      context.fillStyle = state.frameColor;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
+    // Bước 2: Vẽ tất cả ảnh chụp
+    slots.forEach((slot, index) => {
+      const photo = state.photos[index];
+      if (!photo) return;
+      drawPhoto(context, photo, slot.x * canvas.width, slot.y * canvas.height, slot.w * canvas.width, slot.h * canvas.height, 0);
+    });
+
+    // Bước 3: Tạo một bản sao của frame nhưng đục lỗ ở các ô ảnh.
+    // Việc này giúp loại bỏ phần nền của file ảnh frame (ví dụ màu peach của Matcha)
+    // để nó không che mất ảnh chụp hoặc màu nền của app.
+    const holeyCanvas = document.createElement("canvas");
+    holeyCanvas.width = canvas.width;
+    holeyCanvas.height = canvas.height;
+    const hCtx = holeyCanvas.getContext("2d");
+    hCtx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    
+    slots.forEach((slot) => {
+      hCtx.clearRect(slot.x * canvas.width, slot.y * canvas.height, slot.w * canvas.width, slot.h * canvas.height);
+    });
+
+    // Vẽ frame đã đục lỗ lên trên cùng
+    context.drawImage(holeyCanvas, 0, 0, canvas.width, canvas.height);
+
+    // Bước 4: Xử lý chi tiết từng ô (để giữ bo góc hoặc vẽ ảnh đè lên ô đục)
     slots.forEach((slot, index) => {
       const photo = state.photos[index];
       if (!photo) return;
@@ -1333,22 +1361,19 @@ async function composeResult() {
       const y = slot.y * canvas.height;
       const width = slot.w * canvas.width;
       const height = slot.h * canvas.height;
-      drawPhoto(context, photo, x, y, width, height, 0);
-    });
 
-    // Ô trong suốt thì vẽ lại frame đè lên ảnh (chỉ trong phạm vi ô) để giữ viền/bo góc.
-    slots.forEach((slot, index) => {
-      if (opaqueSlots[index]) return;
-      const x = slot.x * canvas.width;
-      const y = slot.y * canvas.height;
-      const width = slot.w * canvas.width;
-      const height = slot.h * canvas.height;
-      context.save();
-      context.beginPath();
-      context.rect(x, y, width, height);
-      context.clip();
-      context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
-      context.restore();
+      if (opaqueSlots[index]) {
+        // Ô đục: Vẽ lại ảnh lên trên cùng (vì frame có thể có hộp trắng/đen ở đây)
+        drawPhoto(context, photo, x, y, width, height, 0);
+      } else {
+        // Ô trong suốt: Vẽ lại phần frame đè lên ảnh để lấy các sticker/bo góc
+        context.save();
+        context.beginPath();
+        context.rect(x, y, width, height);
+        context.clip();
+        context.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+        context.restore();
+      }
     });
     return;
   }

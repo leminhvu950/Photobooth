@@ -548,7 +548,7 @@ svg {
   display: block;
   overflow: hidden;
   border-radius: 13px;
-  background: #fff3e8;
+  background: transparent; /* Xóa nền kem mặc định */
 }
 
 .active-layout-single .gallery-frame-preview { aspect-ratio: 3 / 2; }
@@ -569,13 +569,8 @@ svg {
 .gallery-photo i {
   display: block;
   border-radius: 3px;
-  background-color: #c4e0df;
-  background-image:
-    radial-gradient(circle at center 35%, #f6d0bd 0 7px, transparent 8px),
-    radial-gradient(ellipse at center 95%, #c5765e 0 18px, transparent 19px),
-    linear-gradient(145deg, #c4e0df, #8eb8b7);
-  background-repeat: no-repeat;
-  background-position: center;
+  /* Xóa toàn bộ hình người và màu nền xanh của ảnh mẫu */
+  background: transparent;
 }
 
 /* 1 ảnh */
